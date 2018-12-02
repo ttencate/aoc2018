@@ -17,17 +17,13 @@ fn fetch_input(year: u32, day: u32) -> Result<String, Box<dyn Error>> {
     let url = format!("https://adventofcode.com/{}/day/{}/input", year, day);
     let client = reqwest::Client::new();
     let session_cookie = load_session_cookie()?;
-    let text = client.get(&url)
+    client.get(&url)
         .header(reqwest::header::COOKIE, format!("session={}", session_cookie))
         .send()
         .expect("request failed")
         .error_for_status()?
-        .text();
-    // text.map_err(Box::new)
-    match text {
-        Ok(t) => Ok(t),
-        Err(e) => Err(Box::new(e)),
-    }
+        .text()
+        .map_err(From::from)
 }
 
 fn main() {
