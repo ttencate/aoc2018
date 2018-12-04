@@ -10,7 +10,7 @@ fn load_session_cookie() -> Result<String, io::Error> {
 }
 
 fn input_file_name(_year: u32, day: u32) -> String {
-    format!("input/{:02}", day)
+    format!("input/{:02}.in", day)
 }
 
 fn fetch_input(year: u32, day: u32) -> Result<String, Box<dyn Error>> {
