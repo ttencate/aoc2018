@@ -4,13 +4,12 @@ use std::collections::HashMap;
 use regex::Regex;
 use std::io;
 use std::io::BufRead;
-use std::iter;
 use std::iter::FromIterator;
 
 #[derive(Debug)]
 #[derive(Default)]
 struct Guard {
-    id: u32, 
+    id: u32,
     total_sleep_minutes: u32,
     sleep_by_minute: Vec<u32>,
 }
@@ -20,7 +19,7 @@ impl Guard {
         Guard {
             id: id,
             total_sleep_minutes: 0,
-            sleep_by_minute: Vec::from_iter(iter::repeat(0).take(60)),
+            sleep_by_minute: vec![0; 60],
         }
     }
 
