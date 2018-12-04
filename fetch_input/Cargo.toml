@@ -1,7 +1,0 @@
-[package]
-name = "fetch_input"
-version = "0.1.0"
-authors = ["Thomas ten Cate <ttencate@gmail.com>"]
-
-[dependencies]
-reqwest = "0.9.5"
