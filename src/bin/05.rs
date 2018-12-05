@@ -8,7 +8,7 @@ fn annihilate(a: &u8, b: &u8) -> bool {
 fn reacted_length(input: impl Iterator<Item=u8>) -> usize {
     let mut stack = Vec::new();
     for byte in input.filter(u8::is_ascii_alphabetic) {
-        if !stack.is_empty() && annihilate(stack.last().unwrap(), &byte) {
+        if stack.last().map(|top| annihilate(top, &byte)).unwrap_or(false) {
             stack.pop();
         } else {
             stack.push(byte);
