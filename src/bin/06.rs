@@ -35,12 +35,12 @@ fn main() {
         points.push(point);
     }
 
-    let mut region_sizes = HashMap::new();
-
     let x_min = points.iter().map(|p| p.x).min().unwrap();
     let x_max = points.iter().map(|p| p.x).max().unwrap();
     let y_min = points.iter().map(|p| p.y).min().unwrap();
     let y_max = points.iter().map(|p| p.y).max().unwrap();
+
+    let mut region_sizes = HashMap::new();
     for y in y_min ..= y_max {
         for x in x_min ..= x_max {
             let p = Point::new(x, y);
@@ -59,6 +59,7 @@ fn main() {
                 if region_sizes.get(&closest_index).map(|i| *i < 0).unwrap_or(false) {
                     continue;
                 }
+                // If it touches the edge, it bleeds out to infinity. Mark this as -1.
                 if x == x_min || x == x_max || y == y_min || y == y_max {
                     region_sizes.insert(closest_index, -1);
                 }
@@ -66,6 +67,19 @@ fn main() {
             }
         }
     }
-
     println!("{}", region_sizes.values().max().unwrap());
+
+    let mut safe_region_size = 0;
+    for y in y_min ..= y_max {
+        for x in x_min ..= x_max {
+            let p = Point::new(x, y);
+            let total_distance: i32 = points.iter().map(|point| p.distance_to(point)).sum();
+            if total_distance < 10000 {
+                // If it touches the edge, we're in trouble and need to scan a bigger region.
+                assert!(x != x_min && x != x_max && y != y_min && y != y_max);
+                safe_region_size += 1;
+            }
+        }
+    }
+    println!("{}", safe_region_size);
 }
