@@ -1,23 +1,17 @@
 use std::error::Error;
+use std::fmt::Display;
 use std::fs;
 use std::io;
 
-#[macro_export]
-macro_rules! main {
-    ($day: expr, $($fn: expr),*) => {
-        {
-            let day = $day;
-            let input = aoc::get_input(2018, day);
-            let mut part = 1;
-            $(
-                println!("Answer to day {} part {}: {}", day, part, $fn(&input));
-                part += 1;
-            )*
-        }
-    }
+pub fn main<P1, P2, R1, R2>(day: u32, part1: P1, part2: P2)
+    where P1: Fn(&str) -> R1, P2: Fn(&str) -> R2, R1: Display, R2: Display
+{
+    let input = get_input(2018, day);
+    println!("Answer to day {} part 1: {}", day, part1(&input));
+    println!("Answer to day {} part 2: {}", day, part2(&input));
 }
 
-pub fn get_input(year: u32, day: u32) -> String {
+fn get_input(year: u32, day: u32) -> String {
     let input_file_name = input_file_name(year, day);
     fs::read_to_string(&input_file_name)
         .or_else(|_err| -> Result<String, Box<dyn Error>> {

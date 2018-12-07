@@ -14,5 +14,5 @@ Step F must be finished before step E can begin."), "CABDFE");
 }
 
 fn main() {
-    aoc::main!(7, part1);
+    aoc::main(7, part1, part2);
 }
