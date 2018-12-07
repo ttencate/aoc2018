@@ -2,6 +2,21 @@ use std::error::Error;
 use std::fs;
 use std::io;
 
+#[macro_export]
+macro_rules! main {
+    ($day: expr, $($fn: expr),*) => {
+        {
+            let day = $day;
+            let input = aoc::get_input(2018, day);
+            let mut part = 1;
+            $(
+                println!("Answer to day {} part {}: {}", day, part, $fn(&input));
+                part += 1;
+            )*
+        }
+    }
+}
+
 pub fn get_input(year: u32, day: u32) -> String {
     let input_file_name = input_file_name(year, day);
     fs::read_to_string(&input_file_name)
