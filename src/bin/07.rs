@@ -55,8 +55,7 @@ fn part1(input: &str) -> String {
     let nodes = parse_input(input);
     let mut ready: BTreeSet<NodeId> = nodes
         .iter()
-        .filter_map(|(id, node)| if node.borrow().can_start() { Some(id) } else { None })
-        .map(|x| *x) // Is there a better way?
+        .filter_map(|(&id, node)| if node.borrow().can_start() { Some(id) } else { None })
         .collect();
     let mut out = Vec::with_capacity(nodes.len());
     while !ready.is_empty() {
@@ -84,8 +83,7 @@ fn part2_with_params(input: &str, num_workers: usize, step_duration: u32) -> u32
     let nodes = parse_input(input);
     let mut ready: BTreeSet<NodeId> = nodes
         .iter()
-        .filter_map(|(id, node)| if node.borrow().can_start() { Some(id) } else { None })
-        .map(|x| *x) // Is there a better way?
+        .filter_map(|(&id, node)| if node.borrow().can_start() { Some(id) } else { None })
         .collect();
     let mut end_times: BTreeMap<NodeId, u32> = BTreeMap::new();
     let mut now = 0;
@@ -97,10 +95,9 @@ fn part2_with_params(input: &str, num_workers: usize, step_duration: u32) -> u32
             end_times.insert(curr_id, now + curr.duration(step_duration));
         }
         if !end_times.is_empty() {
-            let (ended_id, next_end_time) = end_times
+            let (&ended_id, &next_end_time) = end_times
                 .iter()
-                .min_by_key(|(_, end_time)| end_time.clone())
-                .map(|(a, b)| (*a, *b))
+                .min_by_key(|(_, &end_time)| end_time)
                 .unwrap();
             assert!(now <= next_end_time);
             now = next_end_time;
