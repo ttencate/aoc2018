@@ -3,6 +3,7 @@ extern crate regex;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use regex::Regex;
 
@@ -30,6 +31,10 @@ impl Node {
 
     fn can_start(&self) -> bool {
         self.in_edges.is_empty()
+    }
+
+    fn duration(&self, step_duration: u32) -> u32 {
+        return step_duration + (self.id as u32 - 'A' as u32) + 1
     }
 }
 
@@ -75,8 +80,51 @@ fn part1example() {
     assert_eq!(part1(EXAMPLE), "CABDFE");
 }
 
-fn part2(_input: &str) -> String {
-    "TODO".to_string()
+fn part2_with_params(input: &str, num_workers: usize, step_duration: u32) -> u32 {
+    let nodes = parse_input(input);
+    let mut ready: BTreeSet<NodeId> = nodes
+        .iter()
+        .filter_map(|(id, node)| if node.borrow().can_start() { Some(id) } else { None })
+        .map(|x| *x) // Is there a better way?
+        .collect();
+    let mut end_times: BTreeMap<NodeId, u32> = BTreeMap::new();
+    let mut now = 0;
+    while !ready.is_empty() || !end_times.is_empty() {
+        while end_times.len() < num_workers && !ready.is_empty() {
+            let curr_id = *ready.iter().next().unwrap();
+            let curr = nodes[&curr_id].borrow_mut();
+            ready.remove(&curr_id);
+            end_times.insert(curr_id, now + curr.duration(step_duration));
+        }
+        if !end_times.is_empty() {
+            let (ended_id, next_end_time) = end_times
+                .iter()
+                .min_by_key(|(_, end_time)| end_time.clone())
+                .map(|(a, b)| (*a, *b))
+                .unwrap();
+            assert!(now <= next_end_time);
+            now = next_end_time;
+            let mut ended = nodes[&ended_id].borrow_mut();
+            end_times.remove(&ended_id);
+            for out_edge in ended.out_edges.drain() {
+                let mut next = nodes[&out_edge].borrow_mut();
+                next.in_edges.remove(&ended_id);
+                if next.can_start() {
+                    ready.insert(next.id);
+                }
+            }
+        }
+    }
+    now
+}
+
+fn part2(input: &str) -> u32 {
+    part2_with_params(input, 5, 60)
+}
+
+#[test]
+fn part2example() {
+    assert_eq!(part2_with_params(EXAMPLE, 2, 0), 15);
 }
 
 fn main() {
