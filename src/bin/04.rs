@@ -2,9 +2,25 @@ extern crate regex;
 
 use std::collections::HashMap;
 use regex::Regex;
-use std::io;
-use std::io::BufRead;
-use std::iter::FromIterator;
+
+#[allow(dead_code)]
+static EXAMPLE: &str = "[1518-11-01 00:00] Guard #10 begins shift
+[1518-11-01 00:05] falls asleep
+[1518-11-01 00:25] wakes up
+[1518-11-01 00:30] falls asleep
+[1518-11-01 00:55] wakes up
+[1518-11-01 23:58] Guard #99 begins shift
+[1518-11-02 00:40] falls asleep
+[1518-11-02 00:50] wakes up
+[1518-11-03 00:05] Guard #10 begins shift
+[1518-11-03 00:24] falls asleep
+[1518-11-03 00:29] wakes up
+[1518-11-04 00:02] Guard #99 begins shift
+[1518-11-04 00:36] falls asleep
+[1518-11-04 00:46] wakes up
+[1518-11-05 00:03] Guard #99 begins shift
+[1518-11-05 00:45] falls asleep
+[1518-11-05 00:55] wakes up";
 
 #[derive(Debug)]
 #[derive(Default)]
@@ -35,9 +51,8 @@ impl Guard {
     }
 }
 
-fn main() {
-    let input = io::stdin();
-    let mut lines = Vec::from_iter(input.lock().lines().filter_map(Result::ok));
+fn parse_input(input: &str) -> HashMap<u32, Guard> {
+    let mut lines: Vec<&str> = input.lines().collect();
     lines.sort_unstable();
     let re = Regex::new(r"^\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})\] (Guard #(\d+) begins shift|falls asleep|wakes up)$").unwrap();
 
@@ -69,9 +84,37 @@ fn main() {
         }
     }
 
-    let guard = guards.values().max_by_key(|guard| guard.total_sleep_minutes).unwrap();
-    println!("{}", guard.id * guard.max_minute());
+    guards
+}
 
-    let guard = guards.values().max_by_key(|guard| guard.sleep_by_minute[guard.max_minute() as usize]).unwrap();
-    println!("{}", guard.id * guard.max_minute());
+fn part1(input: &str) -> u32 {
+    let guards = parse_input(input);
+    let guard = guards
+        .values()
+        .max_by_key(|guard| guard.total_sleep_minutes)
+        .unwrap();
+    guard.id * guard.max_minute()
+}
+
+#[test]
+fn part1example() {
+    assert_eq!(part1(EXAMPLE), 240);
+}
+
+fn part2(input: &str) -> u32 {
+    let guards = parse_input(input);
+    let guard = guards
+        .values()
+        .max_by_key(|guard| guard.sleep_by_minute[guard.max_minute() as usize])
+        .unwrap();
+    guard.id * guard.max_minute()
+}
+
+#[test]
+fn part2example() {
+    assert_eq!(part2(EXAMPLE), 4455);
+}
+
+fn main() {
+    aoc::main!(4, part1, part2);
 }

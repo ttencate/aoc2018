@@ -1,9 +1,15 @@
 extern crate regex;
 
 use std::collections::HashMap;
-use std::io;
-use std::io::BufRead;
 use regex::Regex;
+
+#[allow(dead_code)]
+static EXAMPLE: &str = "1, 1
+1, 6
+8, 3
+3, 4
+5, 5
+8, 9";
 
 #[derive(PartialEq)]
 #[derive(Eq)]
@@ -23,18 +29,21 @@ impl Point {
     }
 }
 
-fn main() {
-    let input = io::stdin();
+fn parse_input(input: &str) -> Vec<Point> {
     let re = Regex::new(r"^(\d+), (\d+)$").unwrap();
-    let mut points = Vec::new();
-    for line in input.lock().lines().filter_map(Result::ok) {
-        let captures = re.captures(&line).unwrap();
-        let point = Point::new(
-            captures.get(1).unwrap().as_str().parse::<i32>().unwrap(),
-            captures.get(2).unwrap().as_str().parse::<i32>().unwrap());
-        points.push(point);
-    }
+    input
+        .lines()
+        .map(|line| {
+            let captures = re.captures(&line).unwrap();
+            Point::new(
+                captures.get(1).unwrap().as_str().parse::<i32>().unwrap(),
+                captures.get(2).unwrap().as_str().parse::<i32>().unwrap())
+        })
+        .collect()
+}
 
+fn part1(input: &str) -> i32 {
+    let points = parse_input(input);
     let x_min = points.iter().map(|p| p.x).min().unwrap();
     let x_max = points.iter().map(|p| p.x).max().unwrap();
     let y_min = points.iter().map(|p| p.y).min().unwrap();
@@ -62,24 +71,51 @@ fn main() {
                 // If it touches the edge, it bleeds out to infinity. Mark this as -1.
                 if x == x_min || x == x_max || y == y_min || y == y_max {
                     region_sizes.insert(closest_index, -1);
+                    continue;
                 }
                 *region_sizes.entry(closest_index).or_insert(0) += 1;
             }
         }
     }
-    println!("{}", region_sizes.values().max().unwrap());
+    *region_sizes.values().max().unwrap()
+}
+
+#[test]
+fn part1example() {
+    assert_eq!(part1(EXAMPLE), 17);
+}
+
+fn part2_with_threshold(input: &str, threshold: i32) -> u32 {
+    let points = parse_input(input);
+    let x_min = points.iter().map(|p| p.x).min().unwrap();
+    let x_max = points.iter().map(|p| p.x).max().unwrap();
+    let y_min = points.iter().map(|p| p.y).min().unwrap();
+    let y_max = points.iter().map(|p| p.y).max().unwrap();
 
     let mut safe_region_size = 0;
     for y in y_min ..= y_max {
         for x in x_min ..= x_max {
             let p = Point::new(x, y);
             let total_distance: i32 = points.iter().map(|point| p.distance_to(point)).sum();
-            if total_distance < 10000 {
+            if total_distance < threshold {
                 // If it touches the edge, we're in trouble and need to scan a bigger region.
                 assert!(x != x_min && x != x_max && y != y_min && y != y_max);
                 safe_region_size += 1;
             }
         }
     }
-    println!("{}", safe_region_size);
+    safe_region_size
+}
+
+fn part2(input: &str) -> u32 {
+    part2_with_threshold(input, 10000)
+}
+
+#[test]
+fn part2example() {
+    assert_eq!(part2_with_threshold(EXAMPLE, 32), 16);
+}
+
+fn main() {
+    aoc::main!(6, part1, part2);
 }

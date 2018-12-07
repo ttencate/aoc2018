@@ -1,6 +1,3 @@
-use std::io;
-use std::io::BufRead;
-
 fn annihilate(a: &u8, b: &u8) -> bool {
     a.eq_ignore_ascii_case(b) && a != b
 }
@@ -21,16 +18,32 @@ fn remove_unit(input: impl Iterator<Item=u8>, removal: u8) -> impl Iterator<Item
     input.filter(move |c| !c.eq_ignore_ascii_case(&removal))
 }
 
-fn main() {
-    let input = io::stdin();
-    let polymer = input.lock().lines().next().unwrap().unwrap();
+fn part1(input: &str) -> usize {
+    reacted_length(input.bytes())
+}
 
-    println!("{}", reacted_length(polymer.bytes()));
+#[test]
+fn part1examples() {
+    assert_eq!(part1("aA"), 0);
+    assert_eq!(part1("abBA"), 0);
+    assert_eq!(part1("abAB"), 4);
+    assert_eq!(part1("aabAAB"), 6);
+    assert_eq!(part1("dabAcCaCBAcCcaDA"), 10);
+}
 
-    let min_length = (b'A'..(b'Z' + 1))
-        .map(|removal| remove_unit(polymer.bytes(), removal))
+fn part2(input: &str) -> usize {
+    (b'A'..(b'Z' + 1))
+        .map(|removal| remove_unit(input.bytes(), removal))
         .map(reacted_length)
         .min()
-        .unwrap();
-    println!("{}", min_length);
+        .unwrap()
+}
+
+#[test]
+fn part2examples() {
+    assert_eq!(part2("dabAcCaCBAcCcaDA"), 4);
+}
+
+fn main() {
+    aoc::main!(5, part1, part2);
 }
