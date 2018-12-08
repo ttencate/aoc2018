@@ -24,7 +24,8 @@ impl Node {
             self.metadata.iter().sum::<u32>()
         } else {
             self.metadata.iter().filter_map(|&one_based_index| {
-                self.children.get(one_based_index as usize - 1).map(Node::value)
+                // This might underflow, but then it's also widely out of bounds.
+                self.children.get((one_based_index as usize).wrapping_sub(1)).map(Node::value)
             }).sum::<u32>()
         }
     }
