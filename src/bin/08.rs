@@ -18,6 +18,16 @@ impl Node {
     fn metadata_sum(&self) -> u32 {
         self.metadata.iter().sum::<u32>() + self.children.iter().map(Node::metadata_sum).sum::<u32>()
     }
+
+    fn value(&self) -> u32 {
+        if self.children.is_empty() {
+            self.metadata.iter().sum::<u32>()
+        } else {
+            self.metadata.iter().filter_map(|&one_based_index| {
+                self.children.get(one_based_index as usize - 1).map(Node::value)
+            }).sum::<u32>()
+        }
+    }
 }
 
 fn parse_tree(input: &str) -> Node {
@@ -37,8 +47,14 @@ fn part1example() {
     assert_eq!(part1("2 3 0 3 10 11 12 1 1 0 1 99 2 1 1 2"), 138);
 }
 
-fn part2(input: &str) -> String {
-    "TODO".to_string()
+fn part2(input: &str) -> u32 {
+    let tree = parse_tree(input);
+    tree.value()
+}
+
+#[test]
+fn part2example() {
+    assert_eq!(part2("2 3 0 3 10 11 12 1 1 0 1 99 2 1 1 2"), 66);
 }
 
 fn main() {
