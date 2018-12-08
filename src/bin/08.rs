@@ -59,5 +59,5 @@ fn part2example() {
 }
 
 fn main() {
-    aoc::main(8, part1, part2);
+    aoc::main(part1, part2);
 }
