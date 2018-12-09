@@ -4,6 +4,7 @@ use regex::Regex;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
+use std::ops::DerefMut;
 
 struct Node<T> {
     prev_idx: usize,
@@ -24,27 +25,34 @@ impl<T> CircularLinkedList<T> {
     }
 
     // Just because I don't want to think about iterators in the empty-list case...
-    fn add<'a>(&'a mut self, element: T) -> Pointer<T> {
+    fn add<'a>(&'a mut self, element: T) -> IterMut<T> {
         assert!(self.nodes.is_empty());
         self.nodes.push(Node { prev_idx: 0, next_idx: 0, value: element });
-        Pointer { list: self, current_idx: 0 }
+        IterMut { list: self, current_idx: 0 }
     }
 }
 
 // A bidirectional iterator-like thing that points to a single value in the CircularLinkedList.
-// TODO see if we can make this an actual bidi Iterator
-struct Pointer<'a, T: 'a> {
+struct IterMut<'a, T: 'a> {
     list: &'a mut CircularLinkedList<T>,
     current_idx: usize,
 }
 
-impl<'a, T> Pointer<'a, T> {
-    fn nodes(&mut self) -> &mut Vec<Node<T>> {
+impl<'a, T> IterMut<'a, T> {
+    fn nodes(&self) -> &Vec<Node<T>> {
+        &self.list.nodes
+    }
+
+    fn nodes_mut(&mut self) -> &mut Vec<Node<T>> {
         &mut self.list.nodes
     }
 
-    fn node(&mut self, idx: usize) -> &mut Node<T> {
-        &mut self.nodes()[idx]
+    fn node(&self, idx: usize) -> &Node<T> {
+        &self.nodes()[idx]
+    }
+
+    fn node_mut(&mut self, idx: usize) -> &mut Node<T> {
+        &mut self.nodes_mut()[idx]
     }
 
     fn prev(&mut self) {
@@ -66,8 +74,8 @@ impl<'a, T> Pointer<'a, T> {
             next_idx: next_idx,
             value: element,
         });
-        self.node(current_idx).next_idx = new_idx;
-        self.node(next_idx).prev_idx = new_idx;
+        self.node_mut(current_idx).next_idx = new_idx;
+        self.node_mut(next_idx).prev_idx = new_idx;
     }
 
     // To prevent "leaking" the node, we should actually copy the last node into the position of
@@ -76,13 +84,29 @@ impl<'a, T> Pointer<'a, T> {
         let current_idx = self.current_idx;
         let prev_idx = self.node(current_idx).prev_idx;
         let next_idx = self.node(current_idx).next_idx;
-        self.node(prev_idx).next_idx = next_idx;
-        self.node(next_idx).prev_idx = prev_idx;
+        self.node_mut(prev_idx).next_idx = next_idx;
+        self.node_mut(next_idx).prev_idx = prev_idx;
         self.current_idx = next_idx;
     }
 }
 
-impl<'a, T> Display for Pointer<'a, T>
+impl<'a, T> Deref for IterMut<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        let current_idx = self.current_idx;
+        &self.node(current_idx).value
+    }
+}
+
+impl<'a, T> DerefMut for IterMut<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        let current_idx = self.current_idx;
+        &mut self.node_mut(current_idx).value
+    }
+}
+
+impl<'a, T> Display for IterMut<'a, T>
     where T: Display
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
@@ -93,13 +117,6 @@ impl<'a, T> Display for Pointer<'a, T>
             idx = self.list.nodes[idx].next_idx;
         }
         Ok(())
-    }
-}
-
-impl<'a, T> Deref for Pointer<'a, T> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        &self.list.nodes[self.current_idx].value
     }
 }
 
