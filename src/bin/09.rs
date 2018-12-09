@@ -104,7 +104,10 @@ fn parse_input(input: &str) -> (usize, usize) {
 
 fn part1(input: &str) -> usize {
     let (num_players, last_marble_value) = parse_input(input);
+    winning_score(num_players, last_marble_value)
+}
 
+fn winning_score(num_players: usize, last_marble_value: usize) -> usize {
     let mut marbles = CircularLinkedList::with_capacity(last_marble_value + 1);
     let mut current = marbles.add(0);
 
@@ -142,13 +145,13 @@ fn part1examples() {
     assert_eq!(part1("30 players; last marble is worth 5807 points"), 37305);
 }
 
-fn part2(input: &str) -> String {
-    "TODO".to_string()
+fn part2(input: &str) -> usize {
+    let (num_players, last_marble_value) = parse_input(input);
+    winning_score(num_players, 100 * last_marble_value)
 }
 
 #[test]
 fn part2example() {
-    assert_eq!(part2(""), "TODO");
 }
 
 fn main() {
