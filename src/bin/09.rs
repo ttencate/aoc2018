@@ -15,6 +15,9 @@ struct Node<T> {
 // A circular linked list data structure where all the nodes are owned by a single Vec. This is a
 // nice way to keep ownership clear and obvious, and also has a more efficient memory layout than a
 // pointer-based implementation.
+//
+// Alternatives from the standard library: VecDeque (a ring buffer) and LinkedList (based on
+// pointers). But I'm trying to learn how to do it myself here.
 struct CircularLinkedList<T> {
     nodes: Vec<Node<T>>,
 }
@@ -78,15 +81,29 @@ impl<'a, T> IterMut<'a, T> {
         self.node_mut(next_idx).prev_idx = new_idx;
     }
 
-    // To prevent "leaking" the node, we should actually copy the last node into the position of
-    // the deleted node and update indices accordingly. But in this puzzle, there's no need.
     fn remove_and_next(&mut self) {
-        let current_idx = self.current_idx;
-        let prev_idx = self.node(current_idx).prev_idx;
-        let next_idx = self.node(current_idx).next_idx;
+        let removed_idx = self.current_idx;
+        let prev_idx = self.node(removed_idx).prev_idx;
+        let next_idx = self.node(removed_idx).next_idx;
         self.node_mut(prev_idx).next_idx = next_idx;
         self.node_mut(next_idx).prev_idx = prev_idx;
         self.current_idx = next_idx;
+
+        if removed_idx == self.nodes().len() - 1 {
+            // If our removed node happens to be the last one in the vector, we can just drop it
+            // without updating any indices.
+            self.nodes_mut().pop();
+        } else {
+            // Copy the last node into the position of the deleted node and update indices
+            // accordingly. This isn't actually necessary in this puzzle; I'm doing it just for
+            // educational value.
+            let last = self.nodes_mut().pop().unwrap();
+            *self.node_mut(removed_idx) = last;
+            let prev_idx = self.node(removed_idx).prev_idx;
+            let next_idx = self.node(removed_idx).next_idx;
+            self.node_mut(prev_idx).next_idx = removed_idx;
+            self.node_mut(next_idx).prev_idx = removed_idx;
+        }
     }
 }
 
