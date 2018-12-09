@@ -39,33 +39,45 @@ struct Pointer<'a, T: 'a> {
 }
 
 impl<'a, T> Pointer<'a, T> {
+    fn nodes(&mut self) -> &mut Vec<Node<T>> {
+        &mut self.list.nodes
+    }
+
+    fn node(&mut self, idx: usize) -> &mut Node<T> {
+        &mut self.nodes()[idx]
+    }
+
     fn prev(&mut self) {
-        self.current_idx = self.list.nodes[self.current_idx].prev_idx;
+        let current_idx = self.current_idx;
+        self.current_idx = self.node(current_idx).prev_idx;
     }
 
     fn next(&mut self) {
-        self.current_idx = self.list.nodes[self.current_idx].next_idx;
+        let current_idx = self.current_idx;
+        self.current_idx = self.node(current_idx).next_idx;
     }
 
     fn insert_after(&mut self, element: T) {
-        let next_idx = self.list.nodes[self.current_idx].next_idx;
-        let new_idx = self.list.nodes.len();
+        let current_idx = self.current_idx;
+        let next_idx = self.node(current_idx).next_idx;
+        let new_idx = self.nodes().len();
         self.list.nodes.push(Node {
             prev_idx: self.current_idx,
             next_idx: next_idx,
             value: element,
         });
-        self.list.nodes[self.current_idx].next_idx = new_idx;
-        self.list.nodes[next_idx].prev_idx = new_idx;
+        self.node(current_idx).next_idx = new_idx;
+        self.node(next_idx).prev_idx = new_idx;
     }
 
     // To prevent "leaking" the node, we should actually copy the last node into the position of
     // the deleted node and update indices accordingly. But in this puzzle, there's no need.
     fn remove_and_next(&mut self) {
-        let prev_idx = self.list.nodes[self.current_idx].prev_idx;
-        let next_idx = self.list.nodes[self.current_idx].next_idx;
-        self.list.nodes[prev_idx].next_idx = next_idx;
-        self.list.nodes[next_idx].prev_idx = prev_idx;
+        let current_idx = self.current_idx;
+        let prev_idx = self.node(current_idx).prev_idx;
+        let next_idx = self.node(current_idx).next_idx;
+        self.node(prev_idx).next_idx = next_idx;
+        self.node(next_idx).prev_idx = prev_idx;
         self.current_idx = next_idx;
     }
 }
