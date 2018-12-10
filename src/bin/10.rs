@@ -136,16 +136,15 @@ fn test_render() {
 }
 
 fn message_time(stars: &Vec<Star>) -> i32 {
-    let mut time = 0;
     let mut prev_y_min = i32::min_value();
-    loop {
+    for time in 0.. {
         let y_min = simulate(&stars, time).iter().map(|p| p.y).min().unwrap();
         if y_min < prev_y_min {
             return time - 1;
         }
-        time += 1;
         prev_y_min = y_min;
     }
+    panic!();
 }
 
 fn part1(input: &str) -> String {
