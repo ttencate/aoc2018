@@ -4,5 +4,6 @@ version = "0.1.0"
 authors = ["Thomas ten Cate <ttencate@gmail.com>"]
 
 [dependencies]
+itertools = "0.8.0"
 regex = "1"
 reqwest = "0.9.5"
