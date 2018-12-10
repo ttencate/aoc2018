@@ -6,6 +6,7 @@ use regex::Regex;
 use std::iter;
 use std::ops;
 
+#[allow(dead_code)]
 static EXAMPLE: &str = "position=< 9,  1> velocity=< 0,  2>
 position=< 7,  0> velocity=<-1,  0>
 position=< 3, -2> velocity=<-1,  1>
@@ -110,23 +111,27 @@ fn test_render() {
     assert_eq!(render(&vec![Point { x: 3, y: 5 }, Point { x: 5, y: 7 }]), "\n#..\n...\n..#");
 }
 
-fn part1(input: &str) -> String {
-    let stars = parse_input(input);
+fn message_time(stars: &Vec<Star>) -> i32 {
     let mut time = 0;
     let mut prev_y_min = i32::min_value();
     loop {
         let y_min = simulate(&stars, time).iter().map(|p| p.y).min().unwrap();
         if y_min < prev_y_min {
-            return render(&simulate(&stars, time - 1));
+            return time - 1;
         }
         time += 1;
         prev_y_min = y_min;
     }
 }
 
+fn part1(input: &str) -> String {
+    let stars = parse_input(input);
+    render(&simulate(&stars, message_time(&stars)))
+}
+
 #[test]
 fn part1example() {
-    assert_eq!(part1(EXAMPLE), "#...#..###
+    assert_eq!(part1(EXAMPLE), "\n#...#..###
 #...#...#.
 #...#...#.
 #####...#.
@@ -136,13 +141,14 @@ fn part1example() {
 #...#..###");
 }
 
-fn part2(input: &str) -> String {
-    "TODO".to_string()
+fn part2(input: &str) -> i32 {
+    let stars = parse_input(input);
+    message_time(&stars)
 }
 
 #[test]
 fn part2example() {
-    assert_eq!(part2(""), "TODO");
+    assert_eq!(part2(EXAMPLE), 3);
 }
 
 fn main() {
