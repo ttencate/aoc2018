@@ -2,9 +2,8 @@ extern crate itertools;
 extern crate regex;
 
 use itertools::Itertools;
-use regex::Regex;
-use std::iter;
 use std::ops;
+use std::str::FromStr;
 
 #[allow(dead_code)]
 static EXAMPLE: &str = "position=< 9,  1> velocity=< 0,  2>
@@ -59,25 +58,54 @@ impl ops::Mul<Point> for i32 {
     }
 }
 
+struct Rect {
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+}
+
+impl Rect {
+    fn bounding_box(points: &Vec<Point>) -> Rect {
+        let x_min = points.iter().map(|p| p.x).min().unwrap();
+        let x_max = points.iter().map(|p| p.x).max().unwrap();
+        let y_min = points.iter().map(|p| p.y).min().unwrap();
+        let y_max = points.iter().map(|p| p.y).max().unwrap();
+        let width = (x_max - x_min + 1) as u32;
+        let height = (y_max - y_min + 1) as u32;
+        Rect { x: x_min, y: y_min, width: width, height: height }
+    }
+}
+
 struct Star {
     position: Point,
     velocity: Point,
 }
 
+trait ParsingCaptures {
+    fn parse<T: FromStr>(&self, group: &str) -> Result<T, <T as FromStr>::Err>;
+}
+
+impl<'a> ParsingCaptures for regex::Captures<'a> {
+    fn parse<T: FromStr>(&self, group: &str) -> Result<T, <T as FromStr>::Err> {
+        self.name(group).unwrap().as_str().parse::<T>()
+    }
+}
+
 fn parse_input(input: &str) -> Vec<Star> {
-    let re = Regex::new(r"position=<\s*(-?\d+)\s*,\s*(-?\d+)\s*> velocity=<\s*(-?\d+)\s*,\s*(-?\d+)\s*>").unwrap();
+    let re = regex::Regex::new(r"position=<\s*(?P<x>-?\d+)\s*,\s*(?P<y>-?\d+)\s*> velocity=<\s*(?P<vx>-?\d+)\s*,\s*(?P<vy>-?\d+)\s*>").unwrap();
     input
         .lines()
         .map(|line| {
             let captures = re.captures(line).unwrap();
             Star {
                 position: Point {
-                    x: captures.get(1).unwrap().as_str().parse::<i32>().unwrap(),
-                    y: captures.get(2).unwrap().as_str().parse::<i32>().unwrap(),
+                    x: captures.parse::<i32>("x").unwrap(),
+                    y: captures.parse::<i32>("y").unwrap(),
                 },
                 velocity: Point {
-                    x: captures.get(3).unwrap().as_str().parse::<i32>().unwrap(),
-                    y: captures.get(4).unwrap().as_str().parse::<i32>().unwrap(),
+                    x: captures.parse::<i32>("vx").unwrap(),
+                    y: captures.parse::<i32>("vy").unwrap(),
                 },
             }
         })
@@ -89,15 +117,11 @@ fn simulate(stars: &Vec<Star>, time: i32) -> Vec<Point> {
 }
 
 fn render(points: &Vec<Point>) -> String {
-    let x_min = points.iter().map(|p| p.x).min().unwrap();
-    let x_max = points.iter().map(|p| p.x).max().unwrap();
-    let y_min = points.iter().map(|p| p.y).min().unwrap();
-    let y_max = points.iter().map(|p| p.y).max().unwrap();
-    let width = (x_max - x_min + 1) as usize;
-    let height = (y_max - y_min + 1) as usize;
-    let mut out: Vec<Vec<bool>> = iter::repeat(iter::repeat(false).take(width).collect()).take(height).collect();
+    let bounding_box = Rect::bounding_box(points);
+    let row = vec![false; bounding_box.width as usize];
+    let mut out: Vec<Vec<bool>> = vec![row; bounding_box.height as usize];
     for point in points {
-        out[(point.y - y_min) as usize][(point.x - x_min) as usize] = true;
+        out[(point.y - bounding_box.y) as usize][(point.x - bounding_box.x) as usize] = true;
     }
     "\n".to_string() + &out.iter().map(|row| row.iter().map(|&cell| if cell { '#' } else { '.' }).join("")).join("\n")
 }
