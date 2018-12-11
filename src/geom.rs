@@ -1,4 +1,5 @@
 use std::cmp;
+use std::fmt::{Display, Formatter};
 use std::iter::FromIterator;
 use std::ops;
 
@@ -36,6 +37,13 @@ impl ops::Mul<i32> for Point {
     }
 }
 
+impl Display for Point {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{:},{:}", self.x, self.y);
+        Ok(())
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Rect {
     x: i32,
@@ -45,6 +53,10 @@ pub struct Rect {
 }
 
 impl Rect {
+    pub fn new(x: i32, y: i32, width: u32, height: u32) -> Rect {
+        Rect { x: x, y: y, width: width, height: height }
+    }
+
     pub fn x_min(&self) -> i32 { self.x }
     pub fn x_max(&self) -> i32 { self.x + self.width as i32 - 1 }
     pub fn y_min(&self) -> i32 { self.y }
