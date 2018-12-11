@@ -90,11 +90,11 @@ fn render(points: &Vec<Point>) -> String {
 
 #[test]
 fn test_render() {
-    assert_eq!(render(&vec![Point { x: 0, y: 0 }]), "\n#");
-    assert_eq!(render(&vec![Point { x: 0, y: 0 }, Point { x: 1, y: 0 }]), "\n##");
-    assert_eq!(render(&vec![Point { x: 0, y: 0 }, Point { x: -1, y: 0 }]), "\n##");
-    assert_eq!(render(&vec![Point { x: 0, y: 0 }, Point { x: 0, y: 1 }]), "\n#\n#");
-    assert_eq!(render(&vec![Point { x: 3, y: 5 }, Point { x: 5, y: 7 }]), "\n#..\n...\n..#");
+    assert_eq!(render(&vec![Point::new(0, 0)]), "\n#");
+    assert_eq!(render(&vec![Point::new(0, 0), Point::new(1, 0)]), "\n##");
+    assert_eq!(render(&vec![Point::new(0, 0), Point::new(-1, 0)]), "\n##");
+    assert_eq!(render(&vec![Point::new(0, 0), Point::new(0, 1)]), "\n#\n#");
+    assert_eq!(render(&vec![Point::new(3, 5), Point::new(5, 7)]), "\n#..\n...\n..#");
 }
 
 fn message_time(stars: &Vec<Star>) -> i32 {

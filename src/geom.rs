@@ -9,6 +9,12 @@ pub struct Point {
     pub y: i32,
 }
 
+impl Point {
+    pub fn new(x: i32, y: i32) -> Point {
+        Point { x: x, y: y }
+    }
+}
+
 impl ops::Add<Point> for Point {
     type Output = Point;
     fn add(self, rhs: Point) -> Point {
@@ -30,6 +36,7 @@ impl ops::Mul<i32> for Point {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Rect {
     x: i32,
     y: i32,
@@ -44,6 +51,10 @@ impl Rect {
     pub fn y_max(&self) -> i32 { self.y + self.height as i32 - 1 }
     pub fn width(&self) -> u32 { self.width }
     pub fn height(&self) -> u32 { self.height }
+
+    pub fn iter(&self) -> RectIter {
+        self.clone().into_iter()
+    }
 }
 
 // Allows building a Rect as a bounding box of a series of Points, e.g. using collect().
@@ -63,4 +74,53 @@ impl<'a> FromIterator<&'a Point> for Rect {
         let height = (y_max - y_min + 1) as u32;
         Rect { x: x_min, y: y_min, width: width, height: height }
     }
+}
+
+// Allows iterating over the Points contained in a Rect.
+impl IntoIterator for Rect {
+    type Item = Point;
+    type IntoIter = RectIter;
+    fn into_iter(self) -> Self::IntoIter {
+        RectIter { rect: self, current_point: Point::new(self.x_max(), self.y_min() - 1) }
+    }
+}
+
+pub struct RectIter {
+    rect: Rect,
+    current_point: Point,
+}
+
+impl Iterator for RectIter {
+    type Item = Point;
+
+    fn next(&mut self) -> Option<Point> {
+        self.current_point.x += 1;
+        if self.current_point.x > self.rect.x_max() {
+            self.current_point.x = self.rect.x_min();
+            self.current_point.y += 1;
+        }
+        if self.current_point.x <= self.rect.x_max() && self.current_point.y <= self.rect.y_max() {
+            Some(self.current_point)
+        } else {
+            None
+        }
+    }
+}
+
+#[test]
+fn rect_into_iter_test() {
+    assert_eq!(Rect { x: 0, y: 0, width: 0, height: 0 }.into_iter().collect::<Vec<Point>>(), vec![]);
+    assert_eq!(Rect { x: 0, y: 0, width: 1, height: 0 }.into_iter().collect::<Vec<Point>>(), vec![]);
+    assert_eq!(Rect { x: 0, y: 0, width: 0, height: 1 }.into_iter().collect::<Vec<Point>>(), vec![]);
+    assert_eq!(Rect { x: 0, y: 0, width: 1, height: 1 }.into_iter().collect::<Vec<Point>>(), vec![
+        Point::new(0, 0),
+    ]);
+    assert_eq!(Rect { x: 2, y: -2, width: 2, height: 1 }.into_iter().collect::<Vec<Point>>(), vec![
+        Point::new(2, -2),
+        Point::new(3, -2),
+    ]);
+    assert_eq!(Rect { x: 2, y: -2, width: 1, height: 2 }.into_iter().collect::<Vec<Point>>(), vec![
+        Point::new(2, -2),
+        Point::new(2, -1),
+    ]);
 }
