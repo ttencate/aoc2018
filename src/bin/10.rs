@@ -79,7 +79,7 @@ fn simulate(stars: &Vec<Star>, time: i32) -> Vec<Point> {
 }
 
 fn render(points: &Vec<Point>) -> String {
-    let bounding_box = Rect::bounding_box(points);
+    let bounding_box: Rect = points.iter().collect();
     let row = vec![false; bounding_box.width() as usize];
     let mut out: Vec<Vec<bool>> = vec![row; bounding_box.height() as usize];
     for point in points {
