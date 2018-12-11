@@ -1,8 +1,9 @@
+extern crate aoc;
 extern crate itertools;
 extern crate regex;
 
+use aoc::geom::*;
 use itertools::Itertools;
-use std::ops;
 use std::str::FromStr;
 
 #[allow(dead_code)]
@@ -37,45 +38,6 @@ position=<-6,  0> velocity=< 2,  0>
 position=< 5,  9> velocity=< 1, -2>
 position=<14,  7> velocity=<-2,  0>
 position=<-3,  6> velocity=< 2, -1>";
-
-#[derive(Copy, Clone)]
-struct Point {
-    x: i32,
-    y: i32,
-}
-
-impl ops::Add<Point> for Point {
-    type Output = Point;
-    fn add(self, rhs: Point) -> Point {
-        Point { x: self.x + rhs.x, y: self.y + rhs.y }
-    }
-}
-
-impl ops::Mul<Point> for i32 {
-    type Output = Point;
-    fn mul(self, rhs: Point) -> Point {
-        Point { x: self * rhs.x, y: self * rhs.y }
-    }
-}
-
-struct Rect {
-    x: i32,
-    y: i32,
-    width: u32,
-    height: u32,
-}
-
-impl Rect {
-    fn bounding_box(points: &Vec<Point>) -> Rect {
-        let x_min = points.iter().map(|p| p.x).min().unwrap();
-        let x_max = points.iter().map(|p| p.x).max().unwrap();
-        let y_min = points.iter().map(|p| p.y).min().unwrap();
-        let y_max = points.iter().map(|p| p.y).max().unwrap();
-        let width = (x_max - x_min + 1) as u32;
-        let height = (y_max - y_min + 1) as u32;
-        Rect { x: x_min, y: y_min, width: width, height: height }
-    }
-}
 
 struct Star {
     position: Point,
@@ -118,10 +80,10 @@ fn simulate(stars: &Vec<Star>, time: i32) -> Vec<Point> {
 
 fn render(points: &Vec<Point>) -> String {
     let bounding_box = Rect::bounding_box(points);
-    let row = vec![false; bounding_box.width as usize];
-    let mut out: Vec<Vec<bool>> = vec![row; bounding_box.height as usize];
+    let row = vec![false; bounding_box.width() as usize];
+    let mut out: Vec<Vec<bool>> = vec![row; bounding_box.height() as usize];
     for point in points {
-        out[(point.y - bounding_box.y) as usize][(point.x - bounding_box.x) as usize] = true;
+        out[(point.y - bounding_box.y_min()) as usize][(point.x - bounding_box.x_min()) as usize] = true;
     }
     "\n".to_string() + &out.iter().map(|row| row.iter().map(|&cell| if cell { '#' } else { '.' }).join("")).join("\n")
 }
