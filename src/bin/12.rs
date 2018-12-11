@@ -1,4 +1,4 @@
-fn part1(input: &str) -> String {
+fn part1(_input: &str) -> String {
     "TODO".to_string()
 }
 
@@ -7,7 +7,7 @@ fn part1example() {
     assert_eq!(part1(""), "TODO");
 }
 
-fn part2(input: &str) -> String {
+fn part2(_input: &str) -> String {
     "TODO".to_string()
 }
 
