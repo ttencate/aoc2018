@@ -40,7 +40,7 @@ impl ops::Mul<i32> for Point {
 
 impl Display for Point {
     fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{:},{:}", self.x, self.y);
+        write!(f, "{:},{:}", self.x, self.y)?;
         Ok(())
     }
 }

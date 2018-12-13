@@ -127,10 +127,10 @@ impl<'a, T> Display for IterMut<'a, T>
     where T: Display
 {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        write!(f, "({:2})", **self);
+        write!(f, "({:2})", **self)?;
         let mut idx = self.list.nodes[self.current_idx].next_idx;
         while idx != self.current_idx {
-            write!(f, " {:2} ", self.list.nodes[idx].value);
+            write!(f, " {:2} ", self.list.nodes[idx].value)?;
             idx = self.list.nodes[idx].next_idx;
         }
         Ok(())

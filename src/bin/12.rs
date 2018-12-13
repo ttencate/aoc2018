@@ -70,7 +70,7 @@ impl State {
 
 impl std::fmt::Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{:6} {}", self.start, String::from_utf8(self.pots.clone()).unwrap());
+        write!(f, "{:6} {}", self.start, String::from_utf8(self.pots.clone()).unwrap())?;
         Ok(())
     }
 }
