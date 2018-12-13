@@ -1,4 +1,5 @@
 use aoc::geom::{Direction, Matrix, Point, Turn};
+use std::collections::HashMap;
 use std::cmp::Ordering;
 
 static TURNS: &[Turn] = &[
@@ -9,7 +10,7 @@ static TURNS: &[Turn] = &[
 
 type Map = Matrix<u8>;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Cart {
     pos: Point,
     direction: Direction,
@@ -109,13 +110,51 @@ fn part1examples() {
 "), Point::new(7, 3));
 }
 
-fn part2(_input: &str) -> String {
-    "TODO".to_string()
+fn part2(input: &str) -> Point {
+    let (map, mut carts) = parse_input(input);
+    // We want to be able to borrow a single cart mutably, but also iterate immutably over the
+    // vector at the same time.
+    let mut carts: Vec<&mut Cart> = carts.iter_mut().collect();
+    for _ in 0.. {
+        carts.sort();
+        let mut i = 0;
+        while i < carts.len() {
+            carts[i].next(&map);
+            let mut indices = HashMap::new();
+            for (index, cart) in carts.iter().enumerate() {
+                indices.entry(cart.pos).or_insert(vec![]).push(index);
+            }
+            let mut removed_indices: Vec<usize> = indices
+                .values()
+                .filter(|is| is.len() > 1)
+                .flat_map(Clone::clone)
+                .collect();
+            removed_indices.sort_unstable();
+            for &index in removed_indices.iter().rev() {
+                carts.remove(index);
+                if i >= index {
+                    i = i.wrapping_sub(1);
+                }
+            }
+            i = i.wrapping_add(1);
+        }
+        if carts.len() == 1 {
+            return carts[0].pos;
+        }
+    }
+    panic!();
 }
 
 #[test]
 fn part2example() {
-    assert_eq!(part2(""), "TODO");
+    assert_eq!(part2(r"/>-<\  
+|   |  
+| /<+-\
+| | | v
+\>+</ |
+  |   ^
+  \<->/
+"), Point::new(6, 4));
 }
 
 fn main() {
