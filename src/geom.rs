@@ -2,7 +2,7 @@ use std::cmp;
 use std::fmt::{Display, Formatter};
 use std::iter::FromIterator;
 use std::ops;
-use std::ops::RangeInclusive;
+use std::ops::{Range, RangeInclusive};
 
 // A discrete point on a 2D integer grid.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -15,12 +15,24 @@ impl Point {
     pub fn new(x: i32, y: i32) -> Point {
         Point { x: x, y: y }
     }
+
+    pub fn left() -> Point { Point::new(-1, 0) }
+    pub fn right() -> Point { Point::new(1, 0) }
+    pub fn up() -> Point { Point::new(0, -1) }
+    pub fn down() -> Point { Point::new(0, 1) }
 }
 
 impl ops::Add<Point> for Point {
     type Output = Point;
     fn add(self, rhs: Point) -> Point {
         Point { x: self.x + rhs.x, y: self.y + rhs.y }
+    }
+}
+
+impl ops::AddAssign<Point> for Point {
+    fn add_assign(&mut self, rhs: Point) {
+        self.x += rhs.x;
+        self.y += rhs.y;
     }
 }
 
@@ -45,6 +57,53 @@ impl Display for Point {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Direction {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
+impl Direction {
+    pub fn as_point(self) -> Point {
+        match self {
+            Direction::Left => Point::new(-1, 0),
+            Direction::Right => Point::new(1, 0),
+            Direction::Up => Point::new(0, -1),
+            Direction::Down => Point::new(0, 1),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Turn {
+    Straight,
+    Left,
+    Right,
+}
+
+impl ops::Add<Turn> for Direction {
+    type Output = Direction;
+    fn add(self, turn: Turn) -> Direction {
+        match turn {
+            Turn::Straight => self,
+            Turn::Left => match self {
+                Direction::Left => Direction::Down,
+                Direction::Right => Direction::Up,
+                Direction::Up => Direction::Left,
+                Direction::Down => Direction::Right,
+            }
+            Turn::Right => match self {
+                Direction::Left => Direction::Up,
+                Direction::Right => Direction::Down,
+                Direction::Up => Direction::Right,
+                Direction::Down => Direction::Left,
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Rect {
     x_range: RangeInclusive<i32>,
@@ -54,6 +113,10 @@ pub struct Rect {
 impl Rect {
     pub fn from_inclusive_ranges(x_range: RangeInclusive<i32>, y_range: RangeInclusive<i32>) -> Rect {
         Rect { x_range: x_range, y_range: y_range }
+    }
+
+    pub fn from_exclusive_ranges(x_range: Range<i32>, y_range: Range<i32>) -> Rect {
+        Rect { x_range: x_range.start ..= (x_range.end - 1), y_range: y_range.start ..= (y_range.end - 1) }
     }
 
     pub fn x_min(&self) -> i32 { *self.x_range.start() }
@@ -224,4 +287,22 @@ fn test_matrix_index() {
     assert_eq!(mat.get(Point::new(3, 2)), None);
     assert_eq!(mat.get(Point::new(2, 3)), None);
     assert_eq!(mat.get(Point::new(3, 3)), None);
+}
+
+// Creates a Matrix from lines of text. All lines must be equal in length. The top left cell will
+// be (0, 0).
+impl<'a> FromIterator<&'a str> for Matrix<u8> {
+    fn from_iter<I: IntoIterator<Item = &'a str>>(iter: I) -> Self {
+        let lines: Vec<&str> = iter.into_iter().collect();
+        let height = lines.len();
+        if height == 0 {
+            return Matrix { rect: Rect::from_exclusive_ranges(0..0, 0..0), values: vec![] };
+        }
+        let width = lines[0].len();
+        assert!(lines.iter().all(|line| line.len() == width));
+        Matrix {
+            rect: Rect::from_exclusive_ranges(0..width as i32, 0..height as i32),
+            values: lines.iter().flat_map(|line| line.bytes()).collect(),
+        }
+    }
 }
