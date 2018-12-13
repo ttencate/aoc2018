@@ -1,7 +1,3 @@
-extern crate aoc;
-extern crate itertools;
-extern crate regex;
-
 use aoc::geom::{Point, Rect};
 use itertools::Itertools;
 use std::str::FromStr;

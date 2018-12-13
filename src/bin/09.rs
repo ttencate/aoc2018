@@ -1,5 +1,3 @@
-extern crate regex;
-
 use regex::Regex;
 use std::fmt;
 use std::fmt::{Display, Formatter};

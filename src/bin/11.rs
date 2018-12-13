@@ -1,5 +1,3 @@
-extern crate aoc;
-
 use aoc::geom::{Matrix, Point, Rect};
 use std::iter;
 
