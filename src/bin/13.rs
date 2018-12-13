@@ -64,16 +64,15 @@ fn parse_input(input: &str) -> (Map, Vec<Cart>) {
     let mut map: Map = input.lines().collect();
     let mut carts = vec![];
     for pos in map.coords() {
-        if let Some((direction, track)) = match map[pos] as char {
-            '<' => Some((Direction::Left, '-')),
-            '>' => Some((Direction::Right, '-')),
-            '^' => Some((Direction::Up, '|')),
-            'v' => Some((Direction::Down, '|')),
-            _ => None,
-        } {
-            map[pos] = track as u8;
-            carts.push(Cart { pos: pos, direction: direction, next_turn: 0 });
-        }
+        let (direction, track) = match map[pos] as char {
+            '<' => (Direction::Left, '-'),
+            '>' => (Direction::Right, '-'),
+            '^' => (Direction::Up, '|'),
+            'v' => (Direction::Down, '|'),
+            _ => continue
+        };
+        map[pos] = track as u8;
+        carts.push(Cart { pos: pos, direction: direction, next_turn: 0 });
     }
     (map, carts)
 }
