@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use std::collections::VecDeque;
 
 struct State {
     scoreboard: Vec<u8>,
@@ -51,23 +50,18 @@ fn part1examples() {
 }
 
 fn part2(input: &str) -> usize {
-    let search_string: VecDeque<u8> = input.trim().chars().map(|c| c as u8 - '0' as u8).collect();
+    let search_string: Vec<u8> = input.trim().chars().map(|c| c as u8 - '0' as u8).collect();
     let search_len = search_string.len();
 
     let mut state = State::new();
     let mut start_idx = 0;
-    let mut substring = VecDeque::new();
     loop {
         if state.scoreboard.len() < start_idx + search_len {
             state.step();
         } else {
-            while substring.len() < search_len {
-                substring.push_back(state.scoreboard[start_idx + substring.len()]);
-            }
-            if substring == search_string {
+            if !(0..search_len).any(|i| search_string[i] != state.scoreboard[start_idx + i]) {
                 break start_idx;
             }
-            substring.pop_front();
             start_idx += 1;
         }
     }
