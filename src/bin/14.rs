@@ -52,15 +52,16 @@ fn part1examples() {
 
 fn part2(input: &str) -> usize {
     let search_string: VecDeque<u8> = input.trim().chars().map(|c| c as u8 - '0' as u8).collect();
+    let search_len = search_string.len();
 
     let mut state = State::new();
     let mut start_idx = 0;
     let mut substring = VecDeque::new();
     loop {
-        if state.scoreboard.len() < start_idx + search_string.len() {
+        if state.scoreboard.len() < start_idx + search_len {
             state.step();
         } else {
-            while substring.len() < search_string.len() {
+            while substring.len() < search_len {
                 substring.push_back(state.scoreboard[start_idx + substring.len()]);
             }
             if substring == search_string {
