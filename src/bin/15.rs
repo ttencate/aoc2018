@@ -12,7 +12,6 @@ const GOBLINS: Army = 'G' as Army;
 
 #[derive(Clone, Debug)]
 struct Unit {
-    id: usize,
     army: u8,
     pos: Point,
     hit_points: u32,
@@ -43,12 +42,13 @@ impl Unit {
     }
 
     fn attack_unit(&self, units: &Vec<Unit>) -> Option<UnitId> {
-        let mut candidates: Vec<&Unit> = units
+        units
             .iter()
-            .filter(|unit| unit.is_alive() && is_enemy(self.army, unit.army) && self.pos.distance_to(unit.pos) == 1)
-            .collect();
-        candidates.sort_by_key(|unit| (unit.hit_points, unit.pos));
-        candidates.first().map(|unit| unit.id)
+            .enumerate()
+            .filter(|(_id, unit)| unit.is_alive() && is_enemy(self.army, unit.army) && self.pos.distance_to(unit.pos) == 1)
+            .sorted_by_key(|(_id, unit)| (unit.hit_points, unit.pos))
+            .map(|(id, _unit)| id)
+            .next()
     }
 
     fn find_enemy_in_range(&self, pos: Point, map: &Map) -> Option<Point> {
@@ -500,15 +500,12 @@ fn test_state_round_example_1() {
 
 fn parse_input(input: &str) -> State {
     let map: Map = input.lines().collect();
-    let mut next_id = 0;
     let units = map
         .coords()
         .filter_map(|pos| {
             let cell = map[pos];
             if is_unit(cell) {
-                let unit = Unit { id: next_id, army: cell, pos: pos, hit_points: 200, attack_power: 3 };
-                next_id += 1;
-                Some(unit)
+                Some(Unit { army: cell, pos: pos, hit_points: 200, attack_power: 3 })
             } else {
                 None
             }
