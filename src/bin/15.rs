@@ -32,10 +32,8 @@ impl Unit {
     fn move_pos(&self, map: &Map) -> Option<Point> {
         if self.find_enemy_in_range(self.pos, map).is_some() {
             None
-        } else if let Some(destination) = self.find_destination(map) {
-            Some(self.find_first_step_towards(destination, map))
         } else {
-            None
+            self.find_first_step(map)
         }
     }
 
@@ -62,34 +60,7 @@ impl Unit {
             .next()
     }
 
-    fn find_destination(&self, map: &Map) -> Option<Point> {
-        let mut visited = Matrix::new(map.rect(), false);
-        let mut queue = VecDeque::new();
-
-        visited[self.pos] = true;
-        for &neighbor in self.pos.neighbors().iter() {
-            queue.push_back((neighbor, 0));
-        }
-
-        while let Some((pos, dist)) = queue.pop_front() {
-            if visited[pos] {
-                continue;
-            }
-            if map[pos] != '.' as u8 {
-                continue;
-            }
-            visited[pos] = true;
-            for &neighbor in pos.neighbors().iter() {
-                if is_enemy(self.army, map[neighbor]) {
-                    return Some(pos);
-                }
-                queue.push_back((neighbor, dist + 1));
-            }
-        }
-        None
-    }
-
-    fn find_first_step_towards(&self, destination: Point, map: &Map) -> Point {
+    fn find_first_step(&self, map: &Map) -> Option<Point> {
         let mut visited_from = Matrix::new(map.rect(), None);
         let mut queue = VecDeque::new();
 
@@ -105,37 +76,27 @@ impl Unit {
                 continue;
             }
             visited_from[pos] = Some(from);
-            if pos == destination {
-                let mut p = pos;
-                return loop {
-                    match visited_from[p] {
-                        Some(f) => {
-                            if f == self.pos {
-                                break p;
-                            } else {
-                                p = f;
-                            }
-                        }
-                        None => panic!()
-                    }
-                };
-            }
             for &neighbor in pos.neighbors().iter() {
+                if is_enemy(self.army, map[neighbor]) {
+                    let mut p = pos;
+                    return loop {
+                        match visited_from[p] {
+                            Some(f) => {
+                                if f == self.pos {
+                                    break Some(p);
+                                } else {
+                                    p = f;
+                                }
+                            }
+                            None => panic!()
+                        }
+                    };
+                }
                 queue.push_back((neighbor, pos, dist + 1));
             }
         }
-        panic!();
+        None
     }
-}
-
-#[test]
-fn test_unit_find_destination() {
-    let state = parse_input("#######
-#E..G.#
-#...#.#
-#.G.#G#
-#######");
-    assert_eq!(state.units[0].find_destination(&state.map), Some(Point::new(3, 1)));
 }
 
 #[test]
@@ -422,7 +383,7 @@ fn test_state_round() {
 }
 
 #[test]
-fn test_state_round_summarized_battle_1() {
+fn test_state_round_example_1() {
     let mut state = parse_input("#######
 #G..#E#
 #E#E.E#
@@ -703,7 +664,7 @@ fn part2(input: &str) -> u32 {
 }
 
 #[test]
-fn test_state_round_upgraded_example_3() {
+fn test_state_round_example_3_upgraded() {
     let mut state = upgrade_army(&parse_input("#######
 #E.G#.#
 #.#G..#
