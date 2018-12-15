@@ -138,9 +138,7 @@ impl State {
     }
 
     fn turn_order(&self) -> Vec<UnitId> {
-        let mut turn_order: Vec<UnitId> = (0..self.units.len()).collect();
-        turn_order.sort_by_key(|&id| self.units[id].pos);
-        turn_order
+        (0..self.units.len()).sorted_by_key(|&id| self.units[id].pos).collect()
     }
 
     fn take_turn(&mut self, id: UnitId) -> bool {
