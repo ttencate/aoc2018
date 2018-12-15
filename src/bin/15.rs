@@ -47,17 +47,10 @@ impl Unit {
     }
 
     fn find_enemy_in_range(&self, pos: Point, map: &Map) -> Option<Point> {
-        pos
-            .neighbors()
+        pos.neighbors()
             .iter()
-            .filter_map(|&neighbor| {
-                if is_enemy(self.army, map[neighbor]) {
-                    Some(neighbor)
-                } else {
-                    None
-                }
-            })
-            .next()
+            .find(|&&neighbor| is_enemy(self.army, map[neighbor]))
+            .map(|neighbor| *neighbor)
     }
 
     fn find_first_step(&self, map: &Map) -> Option<Point> {
