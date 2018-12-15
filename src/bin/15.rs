@@ -61,38 +61,27 @@ impl Unit {
     }
 
     fn find_first_step(&self, map: &Map) -> Option<Point> {
-        let mut visited_from = Matrix::new(map.rect(), None);
+        let mut visited = Matrix::new(map.rect(), false);
         let mut queue = VecDeque::new();
 
+        visited[self.pos] = true;
         for &neighbor in self.pos.neighbors().iter() {
-            queue.push_back((neighbor, self.pos, 0));
+            queue.push_back((neighbor, neighbor, 0));
         }
 
-        while let Some((pos, from, dist)) = queue.pop_front() {
-            if visited_from[pos].is_some() {
+        while let Some((pos, first_step, dist)) = queue.pop_front() {
+            if visited[pos] {
                 continue;
             }
             if map[pos] != '.' as u8 {
                 continue;
             }
-            visited_from[pos] = Some(from);
+            visited[pos] = true;
             if self.find_enemy_in_range(pos, map).is_some() {
-                let mut p = pos;
-                return loop {
-                    match visited_from[p] {
-                        Some(f) => {
-                            if f == self.pos {
-                                break Some(p);
-                            } else {
-                                p = f;
-                            }
-                        }
-                        None => panic!()
-                    }
-                };
+                return Some(first_step);
             }
             for &neighbor in pos.neighbors().iter() {
-                queue.push_back((neighbor, pos, dist + 1));
+                queue.push_back((neighbor, first_step, dist + 1));
             }
         }
         None
