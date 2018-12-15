@@ -6,6 +6,11 @@ type Map = Matrix<u8>;
 
 type UnitId = usize;
 
+type Army = u8;
+const ELVES: Army = 'E' as Army;
+const GOBLINS: Army = 'G' as Army;
+
+#[derive(Clone, Debug)]
 struct Unit {
     id: usize,
     army: u8,
@@ -16,7 +21,7 @@ struct Unit {
 }
 
 fn is_unit(c: u8) -> bool {
-    c == 'E' as u8 || c == 'G' as u8
+    c == ELVES || c == GOBLINS
 }
 
 fn is_enemy(a: u8, b: u8) -> bool {
@@ -170,20 +175,22 @@ fn test_unit_attack_unit() {
     assert_eq!(state.units[2].attack_unit(&state.units), Some(1));
 }
 
+#[derive(Clone)]
 struct State {
     map: Map,
     units: Vec<Unit>,
+    rounds_completed: u32,
 }
 
 impl State {
     // Returns true if the round was fought to completion.
     fn round(&mut self) -> bool {
         for id in self.turn_order() {
-            if self.is_done() {
+            if !self.take_turn(id) {
                 return false;
             }
-            self.take_turn(id);
         }
+        self.rounds_completed += 1;
         true
     }
 
@@ -193,12 +200,16 @@ impl State {
         turn_order
     }
 
-    fn take_turn(&mut self, id: UnitId) {
+    fn take_turn(&mut self, id: UnitId) -> bool {
         if !self.units[id].alive {
-            return;
+            return true;
+        }
+        if self.loser().is_some() {
+            return false;
         }
         self.perform_move(id);
         self.perform_attack(id);
+        return true;
     }
 
     fn perform_move(&mut self, id: UnitId) {
@@ -222,21 +233,19 @@ impl State {
         }
     }
 
-    fn is_done(&self) -> bool {
-        ['E' as u8, 'G' as u8]
+    fn loser(&self) -> Option<u8> {
+        [ELVES, GOBLINS]
             .iter()
-            .any(|&army| {
-                 self.units.iter().filter(|unit| unit.army == army && unit.alive).count() == 0
-             })
+            .find(|&&army| {
+                self.units.iter().filter(|unit| unit.army == army && unit.alive).count() == 0
+            })
+            .map(|army| *army)
     }
 
     fn run_until_done(&mut self) -> (u32, u32) {
-        let mut completed_rounds = 0;
         loop {
-            if self.round() {
-                completed_rounds += 1;
-            } else {
-                break (completed_rounds, self.units.iter().map(|unit| unit.hit_points).sum::<u32>());
+            if !self.round() {
+                break (self.rounds_completed, self.units.iter().map(|unit| unit.hit_points).sum::<u32>());
             }
         }
     }
@@ -561,7 +570,7 @@ fn parse_input(input: &str) -> State {
             }
         })
         .collect();
-    State { map: map, units: units }
+    State { map: map, units: units, rounds_completed: 0 }
 }
 
 fn part1(input: &str) -> u32 {
@@ -670,13 +679,178 @@ fn part1examples() {
     assert_eq!((rounds, remaining_hit_points), (20, 937));
 }
 
-fn part2(_input: &str) -> String {
-    "TODO".to_string()
+fn upgrade_army(state: &State, army: u8, attack_power: u32) -> State {
+    let mut state = state.clone();
+    for unit in state.units.iter_mut() {
+        if unit.army == army {
+            unit.attack_power = attack_power;
+        }
+    }
+    state
+}
+
+fn part2(input: &str) -> u32 {
+    let start_state = parse_input(input);
+    let mut elf_attack_power = 3;
+    loop {
+        let mut state = upgrade_army(&start_state, ELVES, elf_attack_power);
+        let (rounds, remaining_hit_points) = state.run_until_done();
+        if state.units.iter().filter(|unit| unit.army == ELVES).all(|elf| elf.alive) {
+            break rounds * remaining_hit_points
+        }
+        elf_attack_power += 1;
+    }
+}
+
+#[test]
+fn test_state_round_upgraded_example_3() {
+    let mut state = upgrade_army(&parse_input("#######
+#E.G#.#
+#.#G..#
+#G.#.G#
+#G..#.#
+#...E.#
+#######"), ELVES, 15);
+    state.round();
+    assert_eq!(state.to_string(), "#######   
+#.EG#.#   E(197), G(185)
+#G#G..#   G(200), G(200)
+#..#..#   
+#.G.#G#   G(200), G(185)
+#....E#   E(200)
+#######   ");
+    state.round();
+    assert_eq!(state.to_string(), "#######   
+#GEG#.#   G(200), E(191), G(170)
+#.#G..#   G(200)
+#..#..#   
+#..G#G#   G(200), G(170)
+#....E#   E(197)
+#######   ");
+    state.round();
+    assert_eq!(state.to_string(), "#######   
+#GEG#.#   G(200), E(185), G(155)
+#.#G..#   G(200)
+#..#..#   
+#...#G#   G(155)
+#..G.E#   G(200), E(194)
+#######   ");
+    state.round();
+    assert_eq!(state.to_string(), "#######   
+#GEG#.#   G(200), E(179), G(140)
+#.#G..#   G(200)
+#..#..#   
+#...#G#   G(140)
+#...GE#   G(200), E(188)
+#######   ");
+    for _ in 4..13 {
+        state.round();
+    }
+    assert_eq!(state.to_string(), "#######   
+#GEG#.#   G(200), E(125), G(5)
+#.#G..#   G(200)
+#..#..#   
+#...#G#   G(5)
+#...GE#   G(200), E(134)
+#######   ");
+    state.round();
+    assert_eq!(state.to_string(), "#######   
+#GEG#.#   G(200), E(119), G(200)
+#.#...#   
+#..#..#   
+#...#.#   
+#...GE#   G(200), E(128)
+#######   ");
+    for _ in 14..27 {
+        state.round();
+    }
+    assert_eq!(state.to_string(), "#######   
+#GEG#.#   G(5), E(41), G(200)
+#.#...#   
+#..#..#   
+#...#.#   
+#...GE#   G(5), E(89)
+#######   ");
+    state.round();
+    assert_eq!(state.to_string(), "#######   
+#.EG#.#   E(35), G(200)
+#.#...#   
+#..#..#   
+#...#.#   
+#....E#   E(86)
+#######   ");
+    for _ in 28..33 {
+        state.round();
+    }
+    assert_eq!(state.to_string(), "#######   
+#.EG#.#   E(20), G(110)
+#.#E..#   E(86)
+#..#..#   
+#...#.#   
+#.....#   
+#######   ");
+    for _ in 33..36 {
+        state.round();
+    }
+    assert_eq!(state.to_string(), "#######   
+#.EG#.#   E(11), G(20)
+#.#E..#   E(86)
+#..#..#   
+#...#.#   
+#.....#   
+#######   ");
+    assert_eq!(state.rounds_completed, 36);
+    assert_eq!(state.round(), true);
+    assert_eq!(state.to_string(), "#######   
+#.E.#.#   E(8)
+#.#E..#   E(86)
+#..#..#   
+#...#.#   
+#.....#   
+#######   ");
+    assert_eq!(state.rounds_completed, 37);
+    assert_eq!(state.round(), false);
 }
 
 #[test]
 fn part2example() {
-    assert_eq!(part2(""), "TODO");
+    assert_eq!(part2("#######
+#.G...#
+#...EG#
+#.#.#G#
+#..G#E#
+#.....#
+#######"), 4988);
+    assert_eq!(part2("#######
+#E..EG#
+#.#G.E#
+#E.##E#
+#G..#.#
+#..E#.#
+#######"), 31284);
+    assert_eq!(part2("#######
+#E.G#.#
+#.#G..#
+#G.#.G#
+#G..#.#
+#...E.#
+#######"), 3478);
+    assert_eq!(part2("#######
+#.E...#
+#.#..G#
+#.###.#
+#E#G#G#
+#...#G#
+#######"), 6474);
+    assert_eq!(part2("#########
+#G......#
+#.E.#...#
+#..##..G#
+#...##..#
+#...#...#
+#.G...G.#
+#.....G.#
+#########"), 1140);
 }
 
 fn main() {

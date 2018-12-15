@@ -240,6 +240,7 @@ fn rect_into_iter_test() {
 }
 
 // A dense 2D rectangular array with customizable lower bound.
+#[derive(PartialEq, Eq, Clone)]
 pub struct Matrix<T> {
     rect: Rect,
     values: Vec<T>,
