@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::cmp;
 use std::fmt::{Display, Formatter};
 use std::iter::FromIterator;
@@ -20,6 +21,14 @@ impl Point {
     pub fn right() -> Point { Point::new(1, 0) }
     pub fn up() -> Point { Point::new(0, -1) }
     pub fn down() -> Point { Point::new(0, 1) }
+
+    pub fn neighbors(self) -> [Point; 4] {
+        [self + Point::up(), self + Point::left(), self + Point::right(), self + Point::down()]
+    }
+
+    pub fn distance_to(self, other: Point) -> u32 {
+        (self.x - other.x).abs() as u32 + (self.y - other.y).abs() as u32
+    }
 }
 
 impl ops::Add<Point> for Point {
@@ -47,6 +56,19 @@ impl ops::Mul<i32> for Point {
     type Output = Point;
     fn mul(self, rhs: i32) -> Point {
         Point { x: self.x * rhs, y: self.y * rhs }
+    }
+}
+
+impl cmp::PartialOrd for Point {
+    fn partial_cmp(&self, rhs: &Point) -> Option<cmp::Ordering> {
+        Some(self.cmp(rhs))
+    }
+}
+
+impl cmp::Ord for Point {
+    fn cmp(&self, rhs: &Point) -> cmp::Ordering {
+        self.y.cmp(&rhs.y)
+            .then(self.x.cmp(&rhs.x))
     }
 }
 
@@ -119,6 +141,8 @@ impl Rect {
         Rect { x_range: x_range.start ..= (x_range.end - 1), y_range: y_range.start ..= (y_range.end - 1) }
     }
 
+    pub fn x_range(&self) -> RangeInclusive<i32> { self.x_range.clone() }
+    pub fn y_range(&self) -> RangeInclusive<i32> { self.y_range.clone() }
     pub fn x_min(&self) -> i32 { *self.x_range.start() }
     pub fn x_max(&self) -> i32 { *self.x_range.end() }
     pub fn y_min(&self) -> i32 { *self.y_range.start() }
@@ -228,6 +252,10 @@ impl<T> Matrix<T> {
         Matrix { rect: rect.clone(), values: vec![initial_value; (rect.width() * rect.height()) as usize] }
     }
 
+    pub fn rect(&self) -> &Rect {
+        &self.rect
+    }
+
     pub fn coords(&self) -> impl Iterator<Item=Point> {
         self.rect.iter()
     }
@@ -247,6 +275,12 @@ impl<T> Matrix<T> {
         } else {
             None
         }
+    }
+
+    pub fn row(&self, y: i32) -> &[T] {
+        let start = self.index_of(Point::new(self.rect.x_min(), y));
+        let end = start + self.rect.width() as usize;
+        &self.values[start..end]
     }
 
     fn index_of(&self, point: Point) -> usize {
@@ -304,5 +338,15 @@ impl<'a> FromIterator<&'a str> for Matrix<u8> {
             rect: Rect::from_exclusive_ranges(0..width as i32, 0..height as i32),
             values: lines.iter().flat_map(|line| line.bytes()).collect(),
         }
+    }
+}
+
+impl ToString for Matrix<u8> {
+    fn to_string(&self) -> String {
+        self.values
+            .as_slice()
+            .chunks(self.rect.width() as usize)
+            .map(|row| String::from_utf8_lossy(row))
+            .join("\n")
     }
 }
