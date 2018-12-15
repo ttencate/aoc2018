@@ -150,7 +150,7 @@ impl State {
         if !self.units[id].is_alive() {
             return true;
         }
-        if self.loser().is_some() {
+        if self.is_done() {
             return false;
         }
         self.perform_move(id);
@@ -178,13 +178,12 @@ impl State {
         }
     }
 
-    fn loser(&self) -> Option<u8> {
+    fn is_done(&self) -> bool {
         [ELVES, GOBLINS]
             .iter()
-            .find(|&&army| {
+            .any(|&army| {
                 self.units.iter().filter(|unit| unit.army == army && unit.is_alive()).count() == 0
             })
-            .map(|army| *army)
     }
 
     fn run_until_done(&mut self) -> (u32, u32) {
