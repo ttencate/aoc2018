@@ -76,22 +76,22 @@ impl Unit {
                 continue;
             }
             visited_from[pos] = Some(from);
-            for &neighbor in pos.neighbors().iter() {
-                if is_enemy(self.army, map[neighbor]) {
-                    let mut p = pos;
-                    return loop {
-                        match visited_from[p] {
-                            Some(f) => {
-                                if f == self.pos {
-                                    break Some(p);
-                                } else {
-                                    p = f;
-                                }
+            if self.find_enemy_in_range(pos, map).is_some() {
+                let mut p = pos;
+                return loop {
+                    match visited_from[p] {
+                        Some(f) => {
+                            if f == self.pos {
+                                break Some(p);
+                            } else {
+                                p = f;
                             }
-                            None => panic!()
                         }
-                    };
-                }
+                        None => panic!()
+                    }
+                };
+            }
+            for &neighbor in pos.neighbors().iter() {
                 queue.push_back((neighbor, pos, dist + 1));
             }
         }
