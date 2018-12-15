@@ -17,7 +17,12 @@ struct Unit {
     pos: Point,
     hit_points: u32,
     attack_power: u32,
-    alive: bool,
+}
+
+impl Unit {
+    fn is_alive(&self) -> bool {
+        self.hit_points > 0
+    }
 }
 
 fn is_unit(c: u8) -> bool {
@@ -40,7 +45,7 @@ impl Unit {
     fn attack_unit(&self, units: &Vec<Unit>) -> Option<UnitId> {
         let mut candidates: Vec<&Unit> = units
             .iter()
-            .filter(|unit| unit.alive && is_enemy(self.army, unit.army) && self.pos.distance_to(unit.pos) == 1)
+            .filter(|unit| unit.is_alive() && is_enemy(self.army, unit.army) && self.pos.distance_to(unit.pos) == 1)
             .collect();
         candidates.sort_by_key(|unit| (unit.hit_points, unit.pos));
         candidates.first().map(|unit| unit.id)
@@ -142,7 +147,7 @@ impl State {
     }
 
     fn take_turn(&mut self, id: UnitId) -> bool {
-        if !self.units[id].alive {
+        if !self.units[id].is_alive() {
             return true;
         }
         if self.loser().is_some() {
@@ -168,7 +173,6 @@ impl State {
             let attacked_unit = &mut self.units[attacked_id];
             attacked_unit.hit_points = attacked_unit.hit_points.saturating_sub(attack_power);
             if attacked_unit.hit_points == 0 {
-                attacked_unit.alive = false;
                 self.map[attacked_unit.pos] = '.' as u8;
             }
         }
@@ -178,7 +182,7 @@ impl State {
         [ELVES, GOBLINS]
             .iter()
             .find(|&&army| {
-                self.units.iter().filter(|unit| unit.army == army && unit.alive).count() == 0
+                self.units.iter().filter(|unit| unit.army == army && unit.is_alive()).count() == 0
             })
             .map(|army| *army)
     }
@@ -193,7 +197,7 @@ impl State {
 
     fn unit_at(&self, pos: Point) -> Option<&Unit> {
         if is_unit(self.map[pos]) {
-            Some(self.units.iter().find(|unit| unit.alive && unit.pos == pos).unwrap())
+            Some(self.units.iter().find(|unit| unit.is_alive() && unit.pos == pos).unwrap())
         } else {
             None
         }
@@ -503,7 +507,7 @@ fn parse_input(input: &str) -> State {
         .filter_map(|pos| {
             let cell = map[pos];
             if is_unit(cell) {
-                let unit = Unit { id: next_id, army: cell, pos: pos, hit_points: 200, attack_power: 3, alive: true };
+                let unit = Unit { id: next_id, army: cell, pos: pos, hit_points: 200, attack_power: 3 };
                 next_id += 1;
                 Some(unit)
             } else {
@@ -636,7 +640,7 @@ fn part2(input: &str) -> u32 {
     loop {
         let mut state = upgrade_army(&start_state, ELVES, elf_attack_power);
         let (rounds, remaining_hit_points) = state.run_until_done();
-        if state.units.iter().filter(|unit| unit.army == ELVES).all(|elf| elf.alive) {
+        if state.units.iter().filter(|unit| unit.army == ELVES).all(Unit::is_alive) {
             break rounds * remaining_hit_points
         }
         elf_attack_power += 1;
