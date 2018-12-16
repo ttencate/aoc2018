@@ -19,9 +19,7 @@ impl Registers {
         }
         if let [Some(a), Some(b), Some(c), Some(d)] =
             RE.captures(line)?
-            .name("registers")
-            .unwrap()
-            .as_str()
+            .name("registers").unwrap().as_str()
             .split(",")
             .map(|v| v.trim().parse::<i32>().ok())
             .collect::<Vec<Option<i32>>>()
@@ -78,7 +76,7 @@ impl Input {
         state.fetch(self.0)
     }
 
-    fn val(&self) -> Option<Value> {
+    fn val(&self, _state: &State) -> Option<Value> {
         Some(self.0)
     }
 }
@@ -94,22 +92,13 @@ impl Output {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 enum Opcode {
-    Addr,
-    Addi,
-    Mulr,
-    Muli,
-    Banr,
-    Bani,
-    Borr,
-    Bori,
-    Setr,
-    Seti,
-    Gtir,
-    Gtri,
-    Gtrr,
-    Eqir,
-    Eqri,
-    Eqrr,
+    Addr, Addi,
+    Mulr, Muli,
+    Banr, Bani,
+    Borr, Bori,
+    Setr, Seti,
+    Gtir, Gtri, Gtrr,
+    Eqir, Eqri, Eqrr,
 }
 
 impl ToString for Opcode {
@@ -119,22 +108,13 @@ impl ToString for Opcode {
 }
 
 const ALL_OPCODES: &[Opcode] = &[
-    Opcode::Addr,
-    Opcode::Addi,
-    Opcode::Mulr,
-    Opcode::Muli,
-    Opcode::Banr,
-    Opcode::Bani,
-    Opcode::Borr,
-    Opcode::Bori,
-    Opcode::Setr,
-    Opcode::Seti,
-    Opcode::Gtir,
-    Opcode::Gtri,
-    Opcode::Gtrr,
-    Opcode::Eqir,
-    Opcode::Eqri,
-    Opcode::Eqrr,
+    Opcode::Addr, Opcode::Addi,
+    Opcode::Mulr, Opcode::Muli,
+    Opcode::Banr, Opcode::Bani,
+    Opcode::Borr, Opcode::Bori,
+    Opcode::Setr, Opcode::Seti,
+    Opcode::Gtir, Opcode::Gtri, Opcode::Gtrr,
+    Opcode::Eqir, Opcode::Eqri, Opcode::Eqrr,
 ];
 
 #[derive(Clone, Copy, Debug)]
@@ -146,62 +126,22 @@ struct Instruction {
 }
 
 impl Instruction {
-    fn parse_line(line: &str) -> Option<(usize, Value, Value, Value)> {
-        if let [Some(opcode_idx), Some(a), Some(b), Some(c)] = line.split_whitespace()
-            .map(|v| v.parse::<Value>().ok())
-            .collect::<Vec<Option<Value>>>()
-            .as_slice()
-        {
-            Some((*opcode_idx as usize, *a, *b, *c))
-        } else {
-            None
-        }
+    fn new(opcode: Opcode, a: Value, b: Value, c: Value) -> Instruction {
+        Instruction { opcode: opcode, a: Input(a), b: Input(b), c: Output(c) }
     }
 
     #[allow(dead_code)]
     fn parse(line: &str) -> Option<Instruction> {
         if let [opcode_str, a, b, c] = line.split_whitespace().collect::<Vec<&str>>().as_slice() {
             let opcode = ALL_OPCODES.iter().find(|opcode| opcode.to_string() == *opcode_str)?;
-            Some(Instruction {
-                opcode: *opcode,
-                a: Input(a.parse::<Value>().ok()?),
-                b: Input(b.parse::<Value>().ok()?),
-                c: Output(c.parse::<Value>().ok()?),
-            })
+            Some(Instruction::new(
+                    *opcode,
+                    a.parse::<Value>().ok()?,
+                    b.parse::<Value>().ok()?,
+                    c.parse::<Value>().ok()?))
         } else {
             None
         }
-    }
-
-    fn parse_with_opcode_map(opcode_map: &HashMap<usize, Opcode>, line: &str) -> Option<Instruction> {
-        Self::parse_line(line)
-            .and_then(|(opcode_idx, a, b, c)| {
-                Some(Instruction {
-                    opcode: *(opcode_map.get(&opcode_idx)?),
-                    a: Input(a),
-                    b: Input(b),
-                    c: Output(c),
-                })
-            })
-    }
-
-    fn parse_multiple(line: &str) -> Option<(usize, Vec<Instruction>)> {
-        Self::parse_line(line)
-            .map(|(opcode_idx, a, b, c)| {
-                (
-                    opcode_idx,
-                    ALL_OPCODES.iter()
-                        .map(|opcode| {
-                            Instruction {
-                                opcode: *opcode,
-                                a: Input(a),
-                                b: Input(b),
-                                c: Output(c),
-                            }
-                        })
-                        .collect()
-                )
-            })
     }
 
     fn execute(&self, state: &mut State) -> Option<()> {
@@ -210,20 +150,20 @@ impl Instruction {
         let c = self.c;
         match self.opcode {
             Opcode::Addr => c.store(state, a.reg(state)? + b.reg(state)?)?,
-            Opcode::Addi => c.store(state, a.reg(state)? + b.val()?)?,
+            Opcode::Addi => c.store(state, a.reg(state)? + b.val(state)?)?,
             Opcode::Mulr => c.store(state, a.reg(state)? * b.reg(state)?)?,
-            Opcode::Muli => c.store(state, a.reg(state)? * b.val()?)?,
+            Opcode::Muli => c.store(state, a.reg(state)? * b.val(state)?)?,
             Opcode::Banr => c.store(state, a.reg(state)? & b.reg(state)?)?,
-            Opcode::Bani => c.store(state, a.reg(state)? & b.val()?)?,
+            Opcode::Bani => c.store(state, a.reg(state)? & b.val(state)?)?,
             Opcode::Borr => c.store(state, a.reg(state)? | b.reg(state)?)?,
-            Opcode::Bori => c.store(state, a.reg(state)? | b.val()?)?,
+            Opcode::Bori => c.store(state, a.reg(state)? | b.val(state)?)?,
             Opcode::Setr => c.store(state, a.reg(state)?)?,
-            Opcode::Seti => c.store(state, a.val()?)?,
-            Opcode::Gtir => c.store(state, if a.val()? > b.reg(state)? { 1 } else { 0 })?,
-            Opcode::Gtri => c.store(state, if a.reg(state)? > b.val()? { 1 } else { 0 })?,
+            Opcode::Seti => c.store(state, a.val(state)?)?,
+            Opcode::Gtir => c.store(state, if a.val(state)? > b.reg(state)? { 1 } else { 0 })?,
+            Opcode::Gtri => c.store(state, if a.reg(state)? > b.val(state)? { 1 } else { 0 })?,
             Opcode::Gtrr => c.store(state, if a.reg(state)? > b.reg(state)? { 1 } else { 0 })?,
-            Opcode::Eqir => c.store(state, if a.val()? == b.reg(state)? { 1 } else { 0 })?,
-            Opcode::Eqri => c.store(state, if a.reg(state)? == b.val()? { 1 } else { 0 })?,
+            Opcode::Eqir => c.store(state, if a.val(state)? == b.reg(state)? { 1 } else { 0 })?,
+            Opcode::Eqri => c.store(state, if a.reg(state)? == b.val(state)? { 1 } else { 0 })?,
             Opcode::Eqrr => c.store(state, if a.reg(state)? == b.reg(state)? { 1 } else { 0 })?,
         }
         Some(())
@@ -238,6 +178,35 @@ fn test_instruction(regs_before: [Value; NUM_REGISTERS], instr_str: &str, regs_a
     assert_eq!(state.registers.0, regs_after);
 }
 
+struct UnidentifiedInstruction {
+    opcode_idx: usize,
+    a: Value,
+    b: Value,
+    c: Value,
+}
+
+impl UnidentifiedInstruction {
+    fn parse(line: &str) -> Option<UnidentifiedInstruction> {
+        if let [Some(opcode_idx), Some(a), Some(b), Some(c)] = line.split_whitespace()
+            .map(|v| v.parse::<Value>().ok())
+            .collect::<Vec<Option<Value>>>()
+            .as_slice()
+        {
+            Some(UnidentifiedInstruction { opcode_idx: *opcode_idx as usize, a: *a, b: *b, c: *c })
+        } else {
+            None
+        }
+    }
+
+    fn with_opcode(&self, opcode: Opcode) -> Instruction {
+        Instruction::new(opcode, self.a, self.b, self.c)
+    }
+
+    fn with_all_opcodes(&self) -> Vec<Instruction> {
+        ALL_OPCODES.iter().map(|opcode| Instruction::new(*opcode, self.a, self.b, self.c)).collect()
+    }
+}
+
 fn part1(input: &str) -> u32 {
     let mut lines = input.lines();
     let mut answer = 0;
@@ -246,7 +215,8 @@ fn part1(input: &str) -> u32 {
             continue;
         }
         if let Some(regs_before) = Registers::parse(line) {
-            let (_opcode_idx, instructions) = Instruction::parse_multiple(lines.next().unwrap()).unwrap();
+            let instructions = UnidentifiedInstruction::parse(lines.next().unwrap()).unwrap()
+                .with_all_opcodes();
             let regs_after = Registers::parse(lines.next().unwrap()).unwrap();
             if instructions
                 .iter()
@@ -291,23 +261,20 @@ fn part2(input: &str) -> Value {
         blank_lines = 0;
 
         let regs_before = Registers::parse(line).unwrap();
-        let (opcode_idx, instructions) = Instruction::parse_multiple(lines.next().unwrap()).unwrap();
+        let unidentified_instruction = UnidentifiedInstruction::parse(lines.next().unwrap()).unwrap();
         let regs_after = Registers::parse(lines.next().unwrap()).unwrap();
 
-        for instr in instructions {
+        for instruction in unidentified_instruction.with_all_opcodes() {
             let mut state = State { registers: regs_before.clone() };
-            if instr.execute(&mut state).is_none() || state.registers != regs_after {
-                candidates.get_mut(&opcode_idx).unwrap().remove(&instr.opcode);
+            if instruction.execute(&mut state).is_none() || state.registers != regs_after {
+                candidates.get_mut(&unidentified_instruction.opcode_idx).unwrap().remove(&instruction.opcode);
             }
         }
     }
 
     let mut opcode_map = HashMap::<usize, Opcode>::new();
     while !candidates.is_empty() {
-        let (&idx, opcodes) = candidates
-            .iter()
-            .find(|(_idx, opcodes)| opcodes.len() == 1)
-            .unwrap();
+        let (&idx, opcodes) = candidates.iter().find(|(_idx, opcodes)| opcodes.len() == 1).unwrap();
         let identified_opcode = *opcodes.iter().next().unwrap();
         opcode_map.insert(idx, identified_opcode);
         for opcodes in candidates.values_mut() {
@@ -318,7 +285,9 @@ fn part2(input: &str) -> Value {
 
     let mut state = State::new();
     for line in lines {
-        Instruction::parse_with_opcode_map(&opcode_map, line).unwrap().execute(&mut state);
+        let unidentified_instruction = UnidentifiedInstruction::parse(line).unwrap();
+        let instruction = unidentified_instruction.with_opcode(opcode_map[&unidentified_instruction.opcode_idx]);
+        instruction.execute(&mut state);
     }
     state.fetch(0).unwrap()
 }
