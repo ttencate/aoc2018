@@ -302,8 +302,6 @@ fn part2(input: &str) -> Value {
         }
     }
 
-    for (k, v) in candidates.iter() { println!("{:2} -> {:?}", k, v); }
-
     let mut opcode_map = HashMap::<usize, Opcode>::new();
     while !candidates.is_empty() {
         let (&idx, opcodes) = candidates
@@ -317,8 +315,6 @@ fn part2(input: &str) -> Value {
         }
         candidates.remove(&idx);
     }
-
-    for (k, v) in opcode_map.iter() { println!("{:2} -> {:?}", k, v); }
 
     let mut state = State::new();
     for line in lines {
