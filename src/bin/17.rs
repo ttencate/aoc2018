@@ -144,13 +144,15 @@ fn part1example() {
     assert_eq!(part1(EXAMPLE), 57);
 }
 
-fn part2(_input: &str) -> String {
-    "TODO".to_string()
+fn part2(input: &str) -> usize {
+    let mut mat = parse_input(input);
+    flow(Point::new(500, 0), &mut mat);
+    mat.coords().filter(|&point| mat[point] == WATER_AT_REST).count()
 }
 
 #[test]
 fn part2example() {
-    assert_eq!(part2(""), "TODO");
+    assert_eq!(part2(EXAMPLE), 29);
 }
 
 fn main() {
