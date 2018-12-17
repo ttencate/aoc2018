@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use std::cmp;
 use std::fmt::{Display, Formatter};
 use std::iter::FromIterator;
@@ -132,13 +131,37 @@ pub struct Rect {
     y_range: RangeInclusive<i32>,
 }
 
+fn bounding_range(a: &RangeInclusive<i32>, b: &RangeInclusive<i32>) -> RangeInclusive<i32> {
+    // RangeInclusive::is_empty is nightly-only; ExactSizeIterator::len is only implemented up to
+    // RangeInclusive<i16> (for compatibility with systems where usize is only 16 bits?).
+    if a.size_hint().0 == 0 {
+        b.clone()
+    } else if b.size_hint().0 == 0 {
+        a.clone()
+    } else {
+        cmp::min(*a.start(), *b.start()) ..= cmp::max(*a.end(), *b.end())
+    }
+}
+
 impl Rect {
     pub fn from_inclusive_ranges(x_range: RangeInclusive<i32>, y_range: RangeInclusive<i32>) -> Rect {
         Rect { x_range: x_range, y_range: y_range }
     }
 
+    pub fn empty() -> Rect {
+        Self::from_inclusive_ranges(0 ..= -1, 0 ..= -1)
+    }
+
     pub fn from_exclusive_ranges(x_range: Range<i32>, y_range: Range<i32>) -> Rect {
-        Rect { x_range: x_range.start ..= (x_range.end - 1), y_range: y_range.start ..= (y_range.end - 1) }
+        Self::from_inclusive_ranges(
+            x_range.start ..= (x_range.end - 1),
+            y_range.start ..= (y_range.end - 1))
+    }
+
+    pub fn bounding_rects(a: &Rect, b: &Rect) -> Rect {
+        Self::from_inclusive_ranges(
+            bounding_range(&a.x_range, &b.x_range),
+            bounding_range(&a.y_range, &b.y_range))
     }
 
     pub fn x_range(&self) -> RangeInclusive<i32> { self.x_range.clone() }
@@ -153,6 +176,12 @@ impl Rect {
     pub fn contains(&self, point: Point) -> bool {
         // Range::contains is nightly-only.
         self.x_min() <= point.x && point.x <= self.x_max() && self.y_min() <= point.y && point.y <= self.y_max()
+    }
+
+    pub fn padded(&self, left: i32, right: i32, top: i32, bottom: i32) -> Rect {
+        Self::from_inclusive_ranges(
+            self.x_min() - left ..= self.x_max() + right,
+            self.y_min() - top ..= self.y_max() + bottom)
     }
 
     pub fn iter(&self) -> RectIter {
@@ -221,6 +250,12 @@ impl Iterator for RectIter {
     }
 }
 
+impl Display for Rect {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "({}..={}, {}..={})", self.x_min(), self.x_max(), self.y_min(), self.y_max())
+    }
+}
+
 #[test]
 fn rect_into_iter_test() {
     assert_eq!(Rect::from_inclusive_ranges(0..=-1, 0..=-1).into_iter().collect::<Vec<Point>>(), vec![]);
@@ -284,6 +319,14 @@ impl<T> Matrix<T> {
         &self.values[start..end]
     }
 
+    pub fn fill_rect(&mut self, rect: &Rect, value: T)
+        where T: Clone
+    {
+        for point in rect.iter() {
+            self[point] = value.clone();
+        }
+    }
+
     fn index_of(&self, point: Point) -> usize {
         ((point.y - self.rect.y_min()) * self.rect.width() as i32 + point.x - self.rect.x_min()) as usize
     }
@@ -292,14 +335,14 @@ impl<T> Matrix<T> {
 impl<T> ops::Index<Point> for Matrix<T> {
     type Output = T;
     fn index(&self, point: Point) -> &T {
-        assert!(self.rect.contains(point));
+        assert!(self.rect.contains(point), "{} not inside bounds {}", point, self.rect);
         &self.values[self.index_of(point)]
     }
 }
 
 impl<T> ops::IndexMut<Point> for Matrix<T> {
     fn index_mut(&mut self, point: Point) -> &mut T {
-        assert!(self.rect.contains(point));
+        assert!(self.rect.contains(point), "{} not inside bounds {}", point, self.rect);
         let index = self.index_of(point);
         &mut self.values[index]
     }
@@ -342,12 +385,14 @@ impl<'a> FromIterator<&'a str> for Matrix<u8> {
     }
 }
 
-impl ToString for Matrix<u8> {
-    fn to_string(&self) -> String {
-        self.values
-            .as_slice()
-            .chunks(self.rect.width() as usize)
-            .map(|row| String::from_utf8_lossy(row))
-            .join("\n")
+impl Display for Matrix<u8> {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
+        for y in self.rect().y_range() {
+            write!(f, "{}", String::from_utf8_lossy(self.row(y)))?;
+            if y < self.rect().y_max() {
+                write!(f, "\n")?;
+            }
+        }
+        Ok(())
     }
 }
