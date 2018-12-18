@@ -1,4 +1,6 @@
 use aoc::geom::Matrix;
+use crypto::digest::Digest;
+use crypto::sha1::Sha1;
 use std::collections::HashMap;
 
 const OPEN: u8 = '.' as u8;
@@ -49,13 +51,31 @@ fn part1example() {
 ...#.|..|."), 1147);
 }
 
-fn part2(_input: &str) -> String {
-    "TODO".to_string()
+fn hash(mat: &Matrix<u8>) -> String {
+    let mut hasher = Sha1::new();
+    hasher.input(mat.as_slice());
+    hasher.result_str()
 }
 
-#[test]
-fn part2example() {
-    assert_eq!(part2(""), "TODO");
+fn part2(input: &str) -> usize {
+    let mut mat = input.lines().collect::<Matrix<u8>>();
+    let mut hashes = HashMap::new();
+    let mut i = 0;
+    while i < 1000000000 {
+        let hash = hash(&mat);
+
+        if hashes.contains_key(&hash) {
+            let step = i - hashes[&hash];
+            i += (1000000000 - i) / step * step;
+            hashes.clear();
+        }
+
+        hashes.insert(hash, i);
+
+        mat = iterate(&mat);
+        i += 1;
+    }
+    mat.coords().filter(|&p| mat[p] == TREES).count() * mat.coords().filter(|&p| mat[p] == LUMBERYARD).count()
 }
 
 fn main() {

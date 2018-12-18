@@ -332,6 +332,10 @@ impl<T> Matrix<T> {
         &self.values[start..end]
     }
 
+    pub fn as_slice(&self) -> &[T] {
+        self.values.as_slice()
+    }
+
     pub fn fill_rect(&mut self, rect: &Rect, value: T)
         where T: Clone
     {
