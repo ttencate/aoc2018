@@ -11,18 +11,15 @@ const NONE: u8 = ' ' as u8;
 fn iterate(input: &Matrix<u8>) -> Matrix<u8> {
     let mut output = Matrix::new(input.rect(), NONE);
     for p in input.coords() {
-        let mut counts = [OPEN, TREES, LUMBERYARD, NONE]
-            .iter()
-            .map(|c| (*c, 0))
-            .collect::<HashMap<u8, usize>>();
+        let mut counts = [0; 128];
         let center = input[p];
         for &p in &p.neighbors_diagonal() {
-            *counts.get_mut(input.get(p).unwrap_or(&NONE)).unwrap() += 1;
+            counts[*input.get(p).unwrap_or(&NONE) as usize] += 1;
         }
         output[p] = match center {
-            OPEN if counts[&TREES] >= 3 => TREES,
-            TREES if counts[&LUMBERYARD] >= 3 => LUMBERYARD,
-            LUMBERYARD if counts[&LUMBERYARD] < 1 || counts[&TREES] < 1 => OPEN,
+            OPEN if counts[TREES as usize] >= 3 => TREES,
+            TREES if counts[LUMBERYARD as usize] >= 3 => LUMBERYARD,
+            LUMBERYARD if counts[LUMBERYARD as usize] < 1 || counts[TREES as usize] < 1 => OPEN,
             _ => center
         }
     }
