@@ -187,11 +187,15 @@ impl State {
     }
 
     fn run_until_done(&mut self) -> (u32, u32) {
-        loop {
+        println!("Initial situation:\n{}\n", &self);
+        for i in 1.. {
             if !self.round() {
-                break (self.rounds_completed, self.units.iter().map(|unit| unit.hit_points).sum::<u32>());
+                println!("The battle is over! Round {} was not completed (we have {} completed rounds):\n{}\n", i, self.rounds_completed, &self);
+                return (self.rounds_completed, self.units.iter().map(|unit| unit.hit_points).sum::<u32>());
             }
+            println!("Battle still raging after {} rounds:\n{}\n", i, &self);
         }
+        panic!();
     }
 
     fn unit_at(&self, pos: Point) -> Option<&Unit> {
@@ -203,9 +207,9 @@ impl State {
     }
 }
 
-impl ToString for State {
-    fn to_string(&self) -> String {
-        self.map.rect().y_range()
+impl std::fmt::Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{}", self.map.rect().y_range()
             .map(|y| {
                 format!("{}   {}",
                     String::from_utf8_lossy(self.map.row(y)),
@@ -216,7 +220,7 @@ impl ToString for State {
                         })
                         .join(", "))
             })
-            .join("\n")
+            .join("\n"))
     }
 }
 
@@ -634,11 +638,14 @@ fn part2(input: &str) -> u32 {
     let start_state = parse_input(input);
     let mut elf_attack_power = 3;
     loop {
+        println!("Elves attack power: {}\n", elf_attack_power);
         let mut state = upgrade_army(&start_state, ELVES, elf_attack_power);
         let (rounds, remaining_hit_points) = state.run_until_done();
         if state.units.iter().filter(|unit| unit.army == ELVES).all(Unit::is_alive) {
+            println!("No elvish casualties! Answer: {} * {} = {}", rounds, remaining_hit_points, rounds * remaining_hit_points);
             break rounds * remaining_hit_points
         }
+        println!("One or more elves died! Increasing power...\n");
         elf_attack_power += 1;
     }
 }
