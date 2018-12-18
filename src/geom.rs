@@ -332,6 +332,16 @@ impl<T> Matrix<T> {
         &self.values[start..end]
     }
 
+    pub fn map<U, F>(&self, f: F) -> Matrix<U>
+        where F: Fn(&T) -> U, U: Clone + Default
+    {
+        let mut out = Matrix::new(&self.rect, Default::default());
+        for i in 0..self.values.len() {
+            out.values[i] = f(&self.values[i]);
+        }
+        out
+    }
+
     pub fn as_slice(&self) -> &[T] {
         self.values.as_slice()
     }
