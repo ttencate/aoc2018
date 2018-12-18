@@ -25,6 +25,19 @@ impl Point {
         [self + Point::up(), self + Point::left(), self + Point::right(), self + Point::down()]
     }
 
+    pub fn neighbors_diagonal(self) -> [Point; 8] {
+        [
+            self + Point::up(),
+            self + Point::up() + Point::right(),
+            self + Point::right(),
+            self + Point::right() + Point::down(),
+            self + Point::down(),
+            self + Point::down() + Point::left(),
+            self + Point::left(),
+            self + Point::left() + Point::up(),
+        ]
+    }
+
     pub fn distance_to(self, other: Point) -> u32 {
         (self.x - other.x).abs() as u32 + (self.y - other.y).abs() as u32
     }
