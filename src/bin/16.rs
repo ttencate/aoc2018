@@ -106,7 +106,7 @@ fn part2(input: &str) -> Value {
         candidates.remove(&idx);
     }
 
-    let mut state = State::new();
+    let mut state = State::new(4);
     for line in lines {
         let unidentified_instruction = UnidentifiedInstruction::parse(line).unwrap();
         let instruction = unidentified_instruction.with_opcode(opcode_map[&unidentified_instruction.opcode_idx]);

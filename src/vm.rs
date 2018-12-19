@@ -3,27 +3,23 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::fmt::{Display, Formatter};
 
-const NUM_REGISTERS: usize = 4;
-
 pub type Value = i32;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Registers([Value; NUM_REGISTERS]);
+pub struct Registers(Vec<Value>);
 
 impl Registers {
     pub fn parse(line: &str) -> Option<Registers> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"\[(?P<registers>.*)\]").unwrap();
         }
-        if let [Some(a), Some(b), Some(c), Some(d)] =
-            RE.captures(line)?
+        let vals = RE.captures(line)?
             .name("registers").unwrap().as_str()
             .split(",")
             .map(|v| v.trim().parse::<i32>().ok())
-            .collect::<Vec<Option<i32>>>()
-            .as_slice()
-        {
-            Some(Registers([*a, *b, *c, *d]))
+            .collect::<Vec<Option<i32>>>();
+        if vals.iter().all(|val| val.is_some()) {
+            Some(Registers(vals.iter().map(|val| val.unwrap()).collect()))
         } else {
             None
         }
@@ -35,8 +31,8 @@ pub struct State {
 }
 
 impl State {
-    pub fn new() -> State {
-        State { registers: Registers([0; NUM_REGISTERS]) }
+    pub fn new(num_registers: usize) -> State {
+        State { registers: Registers(vec![0; num_registers]) }
     }
 
     pub fn with_registers(registers: &Registers) -> State {
@@ -44,22 +40,20 @@ impl State {
     }
 
     pub fn fetch(&self, reg: Value) -> Option<Value> {
-        let idx = self.register_index(reg)?;
-        Some(self.registers.0[idx])
+        self.registers.0.get(reg as usize).map(|v| *v)
     }
 
     pub fn store(&mut self, reg: Value, val: Value) -> Option<()> {
-        let idx = self.register_index(reg)?;
-        self.registers.0[idx] = val;
-        Some(())
+        if let Some(reg_ref) = self.registers.0.get_mut(reg as usize) {
+            *reg_ref = val;
+            Some(())
+        } else {
+            None
+        }
     }
 
     pub fn registers(&self) -> &Registers {
         &self.registers
-    }
-
-    fn register_index(&self, reg: Value) -> Option<usize> {
-        if reg >= 0 && (reg as usize) < NUM_REGISTERS { Some(reg as usize) } else { None }
     }
 }
 
@@ -178,12 +172,4 @@ impl Instruction {
         }
         Some(())
     }
-}
-
-#[cfg(test)]
-#[inline]
-fn test_instruction(regs_before: [Value; NUM_REGISTERS], instr_str: &str, regs_after: [Value; NUM_REGISTERS]) {
-    let mut state = State::with_registers(&Registers(regs_before));
-    Instruction::parse(instr_str).unwrap().execute(&mut state);
-    assert_eq!(state.registers.0, regs_after);
 }
