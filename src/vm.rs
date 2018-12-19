@@ -28,15 +28,16 @@ impl Registers {
 
 pub struct State {
     registers: Registers,
+    ip: usize,
 }
 
 impl State {
     pub fn new(num_registers: usize) -> State {
-        State { registers: Registers(vec![0; num_registers]) }
+        State { registers: Registers(vec![0; num_registers]), ip: 0 }
     }
 
     pub fn with_registers(registers: &Registers) -> State {
-        State { registers: registers.clone() }
+        State { registers: registers.clone(), ip: 0 }
     }
 
     pub fn fetch(&self, reg: Value) -> Option<Value> {
@@ -171,5 +172,58 @@ impl Instruction {
             Opcode::Eqrr => c.store(state, if a.reg(state)? == b.reg(state)? { 1 } else { 0 })?,
         }
         Some(())
+    }
+}
+
+enum Directive {
+    Ip(usize),
+}
+
+impl Directive {
+    pub fn parse(line: &str) -> Option<Directive> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"^#ip (?P<register>\d+)$").unwrap();
+        }
+        Some(Directive::Ip(RE.captures(line)?.name("register").unwrap().as_str().parse::<usize>().ok()?))
+    }
+}
+
+pub struct Program {
+    instructions: Vec<Instruction>,
+    ip_register: Option<usize>,
+}
+
+impl Program {
+    pub fn parse(input: &str) -> Program {
+        let mut instructions = Vec::new();
+        let mut ip_register = None;
+        for line in input.lines() {
+            if let Some(instruction) = Instruction::parse(line) {
+                instructions.push(instruction);
+            } else if let Some(directive) = Directive::parse(line) {
+                match directive {
+                    Directive::Ip(register) => {
+                        if ip_register.is_some() {
+                            panic!("cannot have multiple #ip directives in program");
+                        }
+                        ip_register = Some(register);
+                    }
+                }
+            }
+        }
+        Program { instructions: instructions, ip_register: ip_register }
+    }
+
+    pub fn execute(&self, state: &mut State) {
+        while state.ip < self.instructions.len() {
+            if let Some(ip_register) = self.ip_register {
+                state.store(ip_register as Value, state.ip as Value).expect("#ip register out of range");
+            }
+            self.instructions[state.ip].execute(state);
+            if let Some(ip_register) = self.ip_register {
+                state.ip = state.fetch(ip_register as Value).expect("#ip register out of range") as usize;
+            }
+            state.ip += 1;
+        }
     }
 }
