@@ -3,6 +3,7 @@ use std::env;
 use std::fmt::Display;
 
 pub mod geom;
+pub mod vm;
 
 mod input;
 
