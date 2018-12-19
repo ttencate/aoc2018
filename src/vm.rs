@@ -60,7 +60,7 @@ impl State {
 
 impl Display for State {
     fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "[{:?}]", self.registers)
+        write!(f, "ip={:2} {:?}", self.ip, self.registers.0)
     }
 }
 
@@ -175,6 +175,12 @@ impl Instruction {
     }
 }
 
+impl Display for Instruction {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{} {} {} {}", self.opcode.to_string(), self.a.0, self.b.0, self.c.0)
+    }
+}
+
 enum Directive {
     Ip(usize),
 }
@@ -216,14 +222,17 @@ impl Program {
 
     pub fn execute(&self, state: &mut State) {
         while state.ip < self.instructions.len() {
+            // println!("               {:?}", state.registers.0);
             if let Some(ip_register) = self.ip_register {
                 state.store(ip_register as Value, state.ip as Value).expect("#ip register out of range");
             }
-            self.instructions[state.ip].execute(state);
+            // println!("{:2} {:13}", state.ip, self.instructions[state.ip]);
+            self.instructions[state.ip].execute(state).expect("illegal instruction");
             if let Some(ip_register) = self.ip_register {
                 state.ip = state.fetch(ip_register as Value).expect("#ip register out of range") as usize;
             }
             state.ip += 1;
         }
+        // println!("               {:?}", state.registers.0);
     }
 }
