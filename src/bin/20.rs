@@ -165,7 +165,8 @@ fn test_map_from_regex() {
 ###############");
 }
 
-fn longest_path_length(map: &Map) -> usize {
+fn part1(input: &str) -> usize {
+    let map = Map::from_regex(input.trim());
     let mut visited = HashSet::new();
     let mut queue = VecDeque::new();
     queue.push_back((Point::default(), 0));
@@ -183,11 +184,6 @@ fn longest_path_length(map: &Map) -> usize {
     max_dist
 }
 
-fn part1(input: &str) -> usize {
-    let map = Map::from_regex(input.trim());
-    longest_path_length(&map)
-}
-
 #[test]
 fn part1example() {
     assert_eq!(part1("^WNE$"), 3);
@@ -197,13 +193,25 @@ fn part1example() {
     assert_eq!(part1("^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$"), 31);
 }
 
-fn part2(_input: &str) -> String {
-    "TODO".to_string()
-}
-
-#[test]
-fn part2example() {
-    assert_eq!(part2(""), "TODO");
+fn part2(input: &str) -> usize {
+    let map = Map::from_regex(input.trim());
+    let mut visited = HashSet::new();
+    let mut queue = VecDeque::new();
+    queue.push_back((Point::default(), 0));
+    let mut count = 0;
+    while let Some((pos, dist)) = queue.pop_front() {
+        if visited.contains(&pos) {
+            continue;
+        }
+        visited.insert(pos);
+        if dist >= 1000 {
+            count += 1;
+        }
+        for &neighbor in &map.rooms[&pos].neighbors {
+            queue.push_back((neighbor, dist + 1));
+        }
+    }
+    count
 }
 
 fn main() {
