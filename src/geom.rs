@@ -5,7 +5,7 @@ use std::ops;
 use std::ops::{Range, RangeInclusive};
 
 // A discrete point on a 2D integer grid.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
