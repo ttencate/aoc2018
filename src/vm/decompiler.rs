@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fmt::{Binary, Display, Formatter};
+use std::fmt::{LowerHex, Display, Formatter};
 use std::ops::Range;
 use super::*;
 
@@ -102,10 +102,10 @@ impl Display for Operand {
     }
 }
 
-impl Binary for Operand {
+impl LowerHex for Operand {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Operand::Value(val) => write!(f, "{:#b}", val),
+            Operand::Value(val) => write!(f, "{:#x}", val),
             Operand::Variable(var) => write!(f, "{}", var),
         }
     }
@@ -124,7 +124,7 @@ impl Display for Expression {
             Expression::Value(val) => write!(f, "{}", val),
             Expression::Variable(var) => write!(f, "{}", var),
             Expression::BinaryOp(lhs, op, rhs) => if op.is_bitwise() {
-                write!(f, "{:b} {} {:b}", lhs, op, rhs)
+                write!(f, "{:x} {} {:x}", lhs, op, rhs)
             } else {
                 write!(f, "{} {} {}", lhs, op, rhs)
             }
@@ -204,7 +204,7 @@ impl Display for Block {
             match &labelled_statement.stat {
                 Statement::Assignment(var, expr) => write!(f, "{} = {};", var, expr)?,
                 Statement::OpAssignment(var, op, oper) => if op.is_bitwise() {
-                    write!(f, "{} {}= {:b};", var, op, oper)?;
+                    write!(f, "{} {}= {:x};", var, op, oper)?;
                 } else {
                     write!(f, "{} {}= {};", var, op, oper)?;
                 }
