@@ -2,10 +2,10 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use super::*;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 enum Variable {
     InstructionPointer(),
-    Named(String),
+    Named(char),
 }
 
 impl Display for Variable {
@@ -26,7 +26,7 @@ impl Display for Label {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Operator {
     Add,
     Mul,
@@ -42,6 +42,13 @@ impl Operator {
     fn is_conditional(&self) -> bool {
         match self {
             Operator::Gt | Operator::Eq | Operator::LEq | Operator::NEq => true,
+            _ => false,
+        }
+    }
+
+    fn is_commutative(&self) -> bool {
+        match self {
+            Operator::Add | Operator::Mul | Operator::Band | Operator::Bor | Operator::Eq | Operator::NEq => true,
             _ => false,
         }
     }
@@ -107,6 +114,7 @@ impl Display for Expression {
 #[derive(Clone)]
 enum Statement {
     Assignment(Variable, Expression),
+    OpAssignment(Variable, Operator, Operand),
     If(Expression, Box<Block>),
     Goto(Label),
     Exit(),
@@ -132,6 +140,7 @@ impl Display for LabelledStatement {
         write!(f, "{}", indent)?;
         match &self.stat {
             Statement::Assignment(var, expr) => write!(f, "{} = {};", var, expr)?,
+            Statement::OpAssignment(var, op, oper) => write!(f, "{} {}= {};", var, op, oper)?,
             Statement::If(cond, block) => write!(f, "if {} {{\n{}     {}}}", cond, block, indent)?,
             Statement::Goto(label) => write!(f, "goto {};", label)?,
             Statement::Exit() => write!(f, "exit();")?,
@@ -182,6 +191,7 @@ impl<'a> Decompiler<'a> {
             .map(|(idx, instr)| self.instruction_to_labelled_statement(idx, instr))
             .collect();
         let mut program = Block { statements: statements };
+        self.add_op_assignments(&mut program);
         self.add_gotos(&mut program);
         self.strip_unused_labels(&mut program);
         self.add_ifs(&mut program);
@@ -217,6 +227,20 @@ impl<'a> Decompiler<'a> {
         }
     }
 
+    fn add_op_assignments(&self, program: &mut Block) {
+        for labelled_statement in &mut program.statements {
+            if let Statement::Assignment(var, Expression::BinaryOp(lhs, op, rhs)) = &labelled_statement.stat {
+                if !op.is_conditional() {
+                    if Operand::Variable(*var) == *lhs {
+                        labelled_statement.stat = Statement::OpAssignment(*var, *op, rhs.clone());
+                    } else if Operand::Variable(*var) == *rhs && op.is_commutative() {
+                        labelled_statement.stat = Statement::OpAssignment(*var, *op, lhs.clone());
+                    }
+                }
+            }
+        }
+    }
+
     fn add_gotos(&self, program: &mut Block) {
         for labelled_statement in &mut program.statements {
             let mut goto_statement = None;
@@ -224,18 +248,8 @@ impl<'a> Decompiler<'a> {
                 Statement::Assignment(Variable::InstructionPointer(), Expression::Value(val)) => {
                     goto_statement = Some(self.goto(*val + 1));
                 }
-                Statement::Assignment(Variable::InstructionPointer(), Expression::BinaryOp(lhs, op, rhs)) => {
-                    if *op == Operator::Add {
-                        match (lhs, rhs) {
-                            (Operand::Value(val), Operand::Variable(Variable::InstructionPointer())) => {
-                                goto_statement = Some(self.goto(labelled_statement.idx as i32 + val + 1));
-                            }
-                            (Operand::Variable(Variable::InstructionPointer()), Operand::Value(val)) => {
-                                goto_statement = Some(self.goto(labelled_statement.idx as i32 + val + 1));
-                            }
-                            _ => {}
-                        }
-                    }
+                Statement::OpAssignment(Variable::InstructionPointer(), Operator::Add, Operand::Value(val)) => {
+                    goto_statement = Some(self.goto(labelled_statement.idx as i32 + val + 1));
                 }
                 _ => {}
             }
@@ -279,8 +293,7 @@ impl<'a> Decompiler<'a> {
             let thd = &program.statements[i + 2];
             if let Statement::Assignment(Variable::Named(fst_var), Expression::BinaryOp(lhs, op, rhs)) = &fst.stat {
                 if op.is_conditional() {
-                    // TODO other order
-                    if let Statement::Assignment(Variable::InstructionPointer(), Expression::BinaryOp(Operand::Variable(Variable::Named(snd_var)), Operator::Add, Operand::Variable(Variable::InstructionPointer()))) = &snd.stat {
+                    if let Statement::OpAssignment(Variable::InstructionPointer(), Operator::Add, Operand::Variable(Variable::Named(snd_var))) = &snd.stat {
                         if fst_var == snd_var {
                             if let Statement::Goto(_) = &thd.stat {
                                 if snd.label.is_none() {
@@ -315,7 +328,7 @@ impl<'a> Decompiler<'a> {
         if Some(val as usize) == self.program.ip_register() {
             Variable::InstructionPointer()
         } else {
-            Variable::Named((('a' as u8 + val as u8) as char).to_string())
+            Variable::Named(('a' as u8 + val as u8) as char)
         }
     }
 
@@ -342,7 +355,7 @@ setr 1 0 0
 seti 8 0 4
 seti 9 0 5").decompile().to_string(), "     b = 5;
      c = 6;
-     a = a + 1;
+     a += 1;
      d = b + c;
      a = b;
      e = 8;
@@ -378,7 +391,7 @@ eqri 1 72 1
 addr 1 3 3
 seti 0 0 3
 seti 0 0 1").decompile().to_string(), "     b = 123;
- 1:  b = b & 456;
+ 1:  b &= 456;
      if b != 72 {
          goto 1;
      }
