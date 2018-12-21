@@ -2,6 +2,7 @@ use super::*;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct Variable(String);
 
 impl Display for Variable {
@@ -10,6 +11,16 @@ impl Display for Variable {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct Label(String);
+
+impl Display for Label {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
 struct Operator(String);
 
 impl Display for Operator {
@@ -18,6 +29,7 @@ impl Display for Operator {
     }
 }
 
+#[derive(PartialEq, Eq)]
 enum Expression {
     Value(Value),
     Variable(Variable),
@@ -38,21 +50,23 @@ impl Display for Expression {
 
 enum Statement {
     Assignment(Variable, Box<Expression>),
+    Goto(Label),
+    Exit(),
 }
 
 impl Display for Statement {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            Statement::Assignment(var, expr) => {
-                write!(f, "{} = {};", var, expr)?;
-            }
+            Statement::Assignment(var, expr) => write!(f, "{} = {};", var, expr),
+            Statement::Goto(label) => write!(f, "goto {};", label),
+            Statement::Exit() => write!(f, "exit();"),
         }
-        Ok(())
     }
 }
 
 struct LabelledStatement {
-    label: Option<String>,
+    idx: usize,
+    label: Option<Label>,
     stat: Statement,
 }
 
@@ -107,6 +121,7 @@ impl<'a> Decompiler<'a> {
             .map(|(idx, instr)| self.instruction_to_labelled_statement(idx, instr))
             .collect();
         let mut program = Block { statements: statements };
+        self.add_gotos(&mut program);
         self.strip_unused_labels(&mut program);
         program
     }
@@ -115,7 +130,7 @@ impl<'a> Decompiler<'a> {
         fn val(val: Value) -> Box<Expression> { Box::new(Expression::Value(val)) }
         let var = |val| Box::new(Expression::Variable(self.var(val)));
         fn op(sym: &str) -> Operator { Operator(sym.to_string()) }
-        let ass = |var, expr| LabelledStatement { label: self.label(idx), stat: Statement::Assignment(var, expr) };
+        let ass = |var, expr| LabelledStatement { idx: idx, label: Some(self.label(idx)), stat: Statement::Assignment(var, expr) };
         fn bin_op(lhs: Box<Expression>, op: Operator, rhs: Box<Expression>) -> Box<Expression> { Box::new(Expression::BinaryOp(lhs, op, rhs)) }
         fn cond_expr(cond: Box<Expression>, tval: Box<Expression>, fval: Box<Expression>) -> Box<Expression> { Box::new(Expression::Conditional(cond, tval, fval)) }
         let a = instr.a().raw();
@@ -141,9 +156,47 @@ impl<'a> Decompiler<'a> {
         }
     }
 
-    fn find_used_labels(&self, program: &Block) -> HashSet<String> {
+    fn add_gotos(&self, program: &mut Block) {
+        for labelled_statement in &mut program.statements {
+            let mut goto_statement = None;
+            match &labelled_statement.stat {
+                Statement::Assignment(var, expr) => {
+                    if *var == self.ip() {
+                        match expr.as_ref() {
+                            Expression::Value(val) => {
+                                goto_statement = Some(self.goto(*val + 1));
+                            }
+                            Expression::BinaryOp(lhs, op, rhs) => {
+                                if *op == Operator("+".to_string()) {
+                                    if **lhs == Expression::Variable(self.ip()) {
+                                        if let Expression::Value(val) = **rhs {
+                                            goto_statement = Some(self.goto(labelled_statement.idx as i32 + val + 1));
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => {}
+            }
+            if let Some(goto_statement) = goto_statement {
+                labelled_statement.stat = goto_statement;
+            }
+        }
+    }
+
+    fn find_used_labels(&self, program: &Block) -> HashSet<Label> {
         let mut used_labels = HashSet::new();
-        // Empty for now.
+        for labelled_statement in &program.statements {
+            match &labelled_statement.stat {
+                Statement::Goto(label) => {
+                    used_labels.insert(label.clone());
+                }
+                _ => {}
+            }
+        }
         used_labels
     }
 
@@ -151,7 +204,7 @@ impl<'a> Decompiler<'a> {
         let used_labels = self.find_used_labels(program);
         for statement in &mut program.statements {
             if let Some(label) = &statement.label {
-                if !used_labels.contains(label) {
+                if !used_labels.contains(&label) {
                     statement.label = None;
                 }
             }
@@ -159,15 +212,27 @@ impl<'a> Decompiler<'a> {
     }
 
     fn var(&self, val: Value) -> Variable {
-        Variable(if Some(val as usize) == self.program.ip_register() {
-            "ip".to_string()
+        if Some(val as usize) == self.program.ip_register() {
+            self.ip()
         } else {
-            (('a' as u8 + val as u8) as char).to_string()
-        })
+            Variable((('a' as u8 + val as u8) as char).to_string())
+        }
     }
 
-    fn label(&self, idx: usize) -> Option<String> {
-        Some(format!("_{}", idx))
+    fn ip(&self) -> Variable {
+        Variable("ip".to_string())
+    }
+
+    fn label(&self, idx: usize) -> Label {
+        Label(format!("_{}", idx))
+    }
+
+    fn goto(&self, idx: Value) -> Statement {
+        if idx >= 0 && idx < self.program.instructions().len() as i32 {
+            Statement::Goto(self.label(idx as usize))
+        } else {
+            Statement::Exit()
+        }
     }
 }
 
@@ -200,9 +265,9 @@ setr 1 0 0
 seti 8 0 4
 seti 9 0 5").decompile().to_string(), "b = 5;
 c = 6;
-ip = ip + 1;
+goto _4;
 d = b + c;
-ip = b;
+_4: ip = b;
 e = 8;
 f = 9;
 ");
