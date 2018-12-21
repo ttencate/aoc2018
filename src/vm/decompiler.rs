@@ -1,4 +1,5 @@
 use super::*;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
 struct Variable(String);
@@ -50,8 +51,23 @@ impl Display for Statement {
     }
 }
 
+struct LabelledStatement {
+    label: Option<String>,
+    stat: Statement,
+}
+
+impl Display for LabelledStatement {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        if let Some(label) = &self.label {
+            write!(f, "{}: ", label)?;
+        }
+        write!(f, "{}", self.stat)?;
+        Ok(())
+    }
+}
+
 struct Block {
-    statements: Vec<Statement>,
+    statements: Vec<LabelledStatement>,
 }
 
 impl Display for Block {
@@ -87,16 +103,19 @@ impl<'a> Decompiler<'a> {
     fn run(&mut self) -> Block {
         let statements = self.program.instructions()
             .iter()
-            .map(|instr| self.instruction_to_statement(instr))
+            .enumerate()
+            .map(|(idx, instr)| self.instruction_to_labelled_statement(idx, instr))
             .collect();
-        Block { statements: statements }
+        let mut program = Block { statements: statements };
+        self.strip_unused_labels(&mut program);
+        program
     }
 
-    fn instruction_to_statement(&self, instr: &Instruction) -> Statement {
+    fn instruction_to_labelled_statement(&self, idx: usize, instr: &Instruction) -> LabelledStatement {
         fn val(val: Value) -> Box<Expression> { Box::new(Expression::Value(val)) }
-        let var = |val| { Box::new(Expression::Variable(self.var(val))) };
+        let var = |val| Box::new(Expression::Variable(self.var(val)));
         fn op(sym: &str) -> Operator { Operator(sym.to_string()) }
-        fn ass(var: Variable, expr: Box<Expression>) -> Statement { Statement::Assignment(var, expr) }
+        let ass = |var, expr| LabelledStatement { label: self.label(idx), stat: Statement::Assignment(var, expr) };
         fn bin_op(lhs: Box<Expression>, op: Operator, rhs: Box<Expression>) -> Box<Expression> { Box::new(Expression::BinaryOp(lhs, op, rhs)) }
         fn cond_expr(cond: Box<Expression>, tval: Box<Expression>, fval: Box<Expression>) -> Box<Expression> { Box::new(Expression::Conditional(cond, tval, fval)) }
         let a = instr.a().raw();
@@ -122,12 +141,33 @@ impl<'a> Decompiler<'a> {
         }
     }
 
+    fn find_used_labels(&self, program: &Block) -> HashSet<String> {
+        let mut used_labels = HashSet::new();
+        // Empty for now.
+        used_labels
+    }
+
+    fn strip_unused_labels(&self, program: &mut Block) {
+        let used_labels = self.find_used_labels(program);
+        for statement in &mut program.statements {
+            if let Some(label) = &statement.label {
+                if !used_labels.contains(label) {
+                    statement.label = None;
+                }
+            }
+        }
+    }
+
     fn var(&self, val: Value) -> Variable {
         Variable(if Some(val as usize) == self.program.ip_register() {
             "ip".to_string()
         } else {
             (('a' as u8 + val as u8) as char).to_string()
         })
+    }
+
+    fn label(&self, idx: usize) -> Option<String> {
+        Some(format!("_{}", idx))
     }
 }
 
