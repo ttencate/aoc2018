@@ -5,7 +5,7 @@ use std::fmt::{Display, Formatter};
 
 pub mod decompiler;
 
-pub type Value = i32;
+pub type Value = i64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Registers(Vec<Value>);
@@ -18,8 +18,8 @@ impl Registers {
         let vals = RE.captures(line)?
             .name("registers").unwrap().as_str()
             .split(",")
-            .map(|v| v.trim().parse::<i32>().ok())
-            .collect::<Vec<Option<i32>>>();
+            .map(|v| v.trim().parse::<Value>().ok())
+            .collect::<Vec<Option<Value>>>();
         if vals.iter().all(|val| val.is_some()) {
             Some(Registers(vals.iter().map(|val| val.unwrap()).collect()))
         } else {
@@ -57,6 +57,10 @@ impl State {
 
     pub fn registers(&self) -> &Registers {
         &self.registers
+    }
+
+    pub fn ip(&self) -> usize {
+        self.ip
     }
 }
 
@@ -250,18 +254,22 @@ impl Program {
         self.ip_register
     }
 
+    pub fn execute_one(&self, state: &mut State) {
+        // println!("               {:?}", state.registers.0);
+        if let Some(ip_register) = self.ip_register {
+            state.store(ip_register as Value, state.ip as Value).expect("#ip register out of range");
+        }
+        // println!("{:2} {:13}", state.ip, self.instructions[state.ip]);
+        self.instructions[state.ip].execute(state).expect("illegal instruction");
+        if let Some(ip_register) = self.ip_register {
+            state.ip = state.fetch(ip_register as Value).expect("#ip register out of range") as usize;
+        }
+        state.ip += 1;
+    }
+
     pub fn execute(&self, state: &mut State) {
         while state.ip < self.instructions.len() {
-            // println!("               {:?}", state.registers.0);
-            if let Some(ip_register) = self.ip_register {
-                state.store(ip_register as Value, state.ip as Value).expect("#ip register out of range");
-            }
-            // println!("{:2} {:13}", state.ip, self.instructions[state.ip]);
-            self.instructions[state.ip].execute(state).expect("illegal instruction");
-            if let Some(ip_register) = self.ip_register {
-                state.ip = state.fetch(ip_register as Value).expect("#ip register out of range") as usize;
-            }
-            state.ip += 1;
+            self.execute_one(state);
         }
         // println!("               {:?}", state.registers.0);
     }

@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Binary, Display, Formatter};
 use std::ops::Range;
 use super::*;
 
@@ -54,13 +54,20 @@ impl Operator {
         }
     }
 
-    fn invert(&self) -> Operator {
+    fn is_bitwise(&self) -> bool {
+        match self {
+            Operator::Band | Operator::Bor => true,
+            _ => false
+        }
+    }
+
+    fn negate(&self) -> Operator {
         match self {
             Operator::Gt => Operator::LEq,
             Operator::Eq => Operator::NEq,
             Operator::LEq => Operator::Gt,
             Operator::NEq => Operator::Eq,
-            _ => panic!("operator {} has no inverse", self),
+            _ => panic!("operator {} has no negation", self),
         }
     }
 }
@@ -95,6 +102,15 @@ impl Display for Operand {
     }
 }
 
+impl Binary for Operand {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Operand::Value(val) => write!(f, "{:#b}", val),
+            Operand::Variable(var) => write!(f, "{}", var),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 enum Expression {
     Value(Value),
@@ -107,7 +123,11 @@ impl Display for Expression {
         match self {
             Expression::Value(val) => write!(f, "{}", val),
             Expression::Variable(var) => write!(f, "{}", var),
-            Expression::BinaryOp(lhs, op, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
+            Expression::BinaryOp(lhs, op, rhs) => if op.is_bitwise() {
+                write!(f, "{:b} {} {:b}", lhs, op, rhs)
+            } else {
+                write!(f, "{} {} {}", lhs, op, rhs)
+            }
         }
     }
 }
@@ -183,7 +203,11 @@ impl Display for Block {
             write!(f, "{}", indent)?;
             match &labelled_statement.stat {
                 Statement::Assignment(var, expr) => write!(f, "{} = {};", var, expr)?,
-                Statement::OpAssignment(var, op, oper) => write!(f, "{} {}= {};", var, op, oper)?,
+                Statement::OpAssignment(var, op, oper) => if op.is_bitwise() {
+                    write!(f, "{} {}= {:b};", var, op, oper)?;
+                } else {
+                    write!(f, "{} {}= {};", var, op, oper)?;
+                }
                 Statement::IfElse(cond, tbody, fbody) => if fbody.is_empty() {
                     write!(f, "if {} {{\n{}     {}}}", cond, tbody, indent)?
                 } else {
@@ -289,7 +313,7 @@ impl<'a> Decompiler<'a> {
                     goto_statement = Some(self.goto(*val + 1));
                 }
                 Statement::OpAssignment(Variable::InstructionPointer(), Operator::Add, Operand::Value(val)) => {
-                    goto_statement = Some(self.goto(labelled_statement.idx as i32 + val + 1));
+                    goto_statement = Some(self.goto(labelled_statement.idx as Value + val + 1));
                 }
                 _ => {}
             }
@@ -362,7 +386,7 @@ impl<'a> Decompiler<'a> {
                                         idx: fst.idx,
                                         label: fst.label,
                                         stat: Statement::ConditionalGoto(
-                                            Expression::BinaryOp(lhs.clone(), op.invert(), rhs.clone()),
+                                            Expression::BinaryOp(lhs.clone(), op.negate(), rhs.clone()),
                                             *target_label),
                                     };
                                     block.statements.remove(i + 2);
@@ -402,7 +426,7 @@ impl<'a> Decompiler<'a> {
                             if tbody.is_empty() {
                                 if let Expression::BinaryOp(_, op, _) = &mut cond {
                                     std::mem::swap(&mut fbody, &mut tbody);
-                                    *op = op.invert();
+                                    *op = op.negate();
                                 }
                             }
 
@@ -511,7 +535,7 @@ impl<'a> Decompiler<'a> {
     }
 
     fn goto(&self, idx: Value) -> Statement {
-        if idx >= 0 && idx < self.program.instructions().len() as i32 {
+        if idx >= 0 && idx < self.program.instructions().len() as Value {
             Statement::Goto(Label(idx as usize))
         } else {
             Statement::Exit()
