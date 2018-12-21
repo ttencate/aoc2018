@@ -3,6 +3,8 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::fmt::{Display, Formatter};
 
+pub mod decompiler;
+
 pub type Value = i32;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -65,7 +67,7 @@ impl Display for State {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct Input(Value);
+pub struct Input(Value);
 
 impl Input {
     fn reg(&self, state: &State) -> Option<Value> {
@@ -75,14 +77,22 @@ impl Input {
     fn val(&self, _state: &State) -> Option<Value> {
         Some(self.0)
     }
+
+    fn raw(&self) -> Value {
+        self.0
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
-struct Output(Value);
+pub struct Output(Value);
 
 impl Output {
     fn store(&self, state: &mut State, val: Value) -> Option<()> {
         state.store(self.0, val)
+    }
+
+    fn raw(&self) -> Value {
+        self.0
     }
 }
 
@@ -147,6 +157,18 @@ impl Instruction {
 
     pub fn opcode(&self) -> Opcode {
         self.opcode
+    }
+
+    pub fn a(&self) -> Input {
+        self.a
+    }
+
+    pub fn b(&self) -> Input {
+        self.b
+    }
+
+    pub fn c(&self) -> Output {
+        self.c
     }
 
     pub fn execute(&self, state: &mut State) -> Option<()> {
@@ -218,6 +240,14 @@ impl Program {
             }
         }
         Program { instructions: instructions, ip_register: ip_register }
+    }
+
+    pub fn instructions(&self) -> &Vec<Instruction> {
+        &self.instructions
+    }
+
+    pub fn ip_register(&self) -> Option<usize> {
+        self.ip_register
     }
 
     pub fn execute(&self, state: &mut State) {
