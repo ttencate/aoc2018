@@ -219,27 +219,26 @@ impl<'a> Decompiler<'a> {
         let val = |val| Operand::Value(val);
         let var = |val| Operand::Variable(self.var(val));
         let ass = |lval, expr| LabelledStatement { idx: idx, label: Some(Label(idx)), stat: Statement::Assignment(lval, expr) };
-        let bin_op = |lhs, op, rhs| Expression::BinaryOp(lhs, op, rhs);
         let a = instr.a().raw();
         let b = instr.b().raw();
         let out = self.var(instr.c().raw());
         match instr.opcode() {
-            Opcode::Addr => ass(out, bin_op(var(a), Operator::Add, var(b))),
-            Opcode::Addi => ass(out, bin_op(var(a), Operator::Add, val(b))),
-            Opcode::Mulr => ass(out, bin_op(var(a), Operator::Mul, var(b))),
-            Opcode::Muli => ass(out, bin_op(var(a), Operator::Mul, val(b))),
-            Opcode::Banr => ass(out, bin_op(var(a), Operator::Band, var(b))),
-            Opcode::Bani => ass(out, bin_op(var(a), Operator::Band, val(b))),
-            Opcode::Borr => ass(out, bin_op(var(a), Operator::Bor, var(b))),
-            Opcode::Bori => ass(out, bin_op(var(a), Operator::Bor, val(b))),
+            Opcode::Addr => ass(out, Expression::BinaryOp(var(a), Operator::Add, var(b))),
+            Opcode::Addi => ass(out, Expression::BinaryOp(var(a), Operator::Add, val(b))),
+            Opcode::Mulr => ass(out, Expression::BinaryOp(var(a), Operator::Mul, var(b))),
+            Opcode::Muli => ass(out, Expression::BinaryOp(var(a), Operator::Mul, val(b))),
+            Opcode::Banr => ass(out, Expression::BinaryOp(var(a), Operator::Band, var(b))),
+            Opcode::Bani => ass(out, Expression::BinaryOp(var(a), Operator::Band, val(b))),
+            Opcode::Borr => ass(out, Expression::BinaryOp(var(a), Operator::Bor, var(b))),
+            Opcode::Bori => ass(out, Expression::BinaryOp(var(a), Operator::Bor, val(b))),
             Opcode::Setr => ass(out, Expression::Variable(self.var(a))),
             Opcode::Seti => ass(out, Expression::Value(self.val(a))),
-            Opcode::Gtir => ass(out, bin_op(val(a), Operator::Gt, var(b))),
-            Opcode::Gtri => ass(out, bin_op(var(a), Operator::Gt, val(b))),
-            Opcode::Gtrr => ass(out, bin_op(var(a), Operator::Gt, var(b))),
-            Opcode::Eqir => ass(out, bin_op(val(a), Operator::Eq, var(b))),
-            Opcode::Eqri => ass(out, bin_op(var(a), Operator::Eq, val(b))),
-            Opcode::Eqrr => ass(out, bin_op(var(a), Operator::Eq, var(b))),
+            Opcode::Gtir => ass(out, Expression::BinaryOp(val(a), Operator::Gt, var(b))),
+            Opcode::Gtri => ass(out, Expression::BinaryOp(var(a), Operator::Gt, val(b))),
+            Opcode::Gtrr => ass(out, Expression::BinaryOp(var(a), Operator::Gt, var(b))),
+            Opcode::Eqir => ass(out, Expression::BinaryOp(val(a), Operator::Eq, var(b))),
+            Opcode::Eqri => ass(out, Expression::BinaryOp(var(a), Operator::Eq, val(b))),
+            Opcode::Eqrr => ass(out, Expression::BinaryOp(var(a), Operator::Eq, var(b))),
         }
     }
 
@@ -490,6 +489,4 @@ seti 0 0 1").decompile().to_string(), "     b = 123;
      } while b != 72;
      b = 0;
 ");
-
-
 }
