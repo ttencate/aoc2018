@@ -1,10 +1,8 @@
-fn part1(_input: &str) -> String {
-    "TODO".to_string()
-}
+use aoc::vm::*;
+use aoc::vm::decompiler::Decompile;
 
-#[test]
-fn part1example() {
-    assert_eq!(part1(""), "TODO");
+fn part1(input: &str) -> String {
+    "\n".to_string() + &Program::parse(input).decompile().to_string()
 }
 
 fn part2(_input: &str) -> String {
