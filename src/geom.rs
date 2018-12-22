@@ -16,6 +16,8 @@ impl Point {
         Point { x: x, y: y }
     }
 
+    pub fn origin() -> Point { Point::new(0, 0) }
+
     pub fn left() -> Point { Point::new(-1, 0) }
     pub fn right() -> Point { Point::new(1, 0) }
     pub fn up() -> Point { Point::new(0, -1) }
