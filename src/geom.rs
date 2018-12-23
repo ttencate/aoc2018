@@ -87,9 +87,35 @@ impl cmp::Ord for Point {
 }
 
 impl Display for Point {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
-        write!(f, "{:},{:}", self.x, self.y)?;
-        Ok(())
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{:},{:}", self.x, self.y)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct Point3 {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+
+impl Point3 {
+    pub fn new(x: i32, y: i32, z: i32) -> Point3 {
+        Point3 { x: x, y: y, z: z }
+    }
+
+    pub fn origin() -> Point3 {
+        Point3::default()
+    }
+
+    pub fn distance_to(&self, other: &Point3) -> u32 {
+        (self.x - other.x).abs() as u32 + (self.y - other.y).abs() as u32 + (self.z - other.z).abs() as u32
+    }
+}
+
+impl Display for Point3 {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{:},{:},{:}", self.x, self.y, self.z)
     }
 }
 
@@ -266,7 +292,7 @@ impl Iterator for RectIter {
 }
 
 impl Display for Rect {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "({}..={}, {}..={})", self.x_min(), self.x_max(), self.y_min(), self.y_max())
     }
 }
@@ -415,7 +441,7 @@ impl<'a> FromIterator<&'a str> for Matrix<u8> {
 }
 
 impl Display for Matrix<u8> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         for y in self.rect().y_range() {
             write!(f, "{}", String::from_utf8_lossy(self.row(y)))?;
             if y < self.rect().y_max() {
