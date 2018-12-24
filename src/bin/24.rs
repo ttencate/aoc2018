@@ -2,7 +2,7 @@ use regex::Regex;
 use std::fmt::{Display, Formatter};
 use std::collections::BTreeSet;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Group {
     id: u32,
     num_units: u32,
@@ -48,7 +48,7 @@ impl Group {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Army {
     name: String,
     groups: Vec<Group>,
@@ -127,7 +127,7 @@ fn parse_input(input: &str) -> Vec<Army> {
         .collect()
 }
 
-fn fight_round(armies: &mut Vec<Army>) {
+fn fight_round(armies: &mut Vec<Army>) -> u32 {
     // for army in armies.iter() { print!("{:}", army); }
     // println!("");
 
@@ -201,6 +201,7 @@ fn fight_round(armies: &mut Vec<Army>) {
     attack_order.sort_by_key(|(army_idx, group_idx)| {
         -(armies[*army_idx].groups[*group_idx].initiative as i32)
     });
+    let mut num_kills = 0;
     for (army_idx, group_idx) in attack_order {
         let attacking_group = &armies[army_idx].groups[group_idx];
         // println!("{:?}", attacking_group);
@@ -217,10 +218,13 @@ fn fight_round(armies: &mut Vec<Army>) {
 
             let defending_group = &mut armies[1 - army_idx].groups[target_idx];
             defending_group.num_units -= units_killed;
+            num_kills += units_killed;
         }
     }
 
     // println!("");
+
+    num_kills
 }
 
 fn winning_army(armies: &mut Vec<Army>) -> Option<usize> {
@@ -231,40 +235,72 @@ fn winning_army(armies: &mut Vec<Army>) -> Option<usize> {
         .map(|(idx, _army)| 1 - idx)
 }
 
-fn fight_until_end(armies: &mut Vec<Army>) -> usize {
+fn fight_until_end(armies: &mut Vec<Army>) -> Option<usize> {
     // "After the fight is over, if both armies still contain units, a new fight begins"
     loop {
-        if let Some(winning_army) = winning_army(armies) {
+        let winning_army = winning_army(armies);
+        if winning_army.is_some() {
             break winning_army;
         }
-        fight_round(armies);
+        let num_kills = fight_round(armies);
+        if num_kills == 0 {
+            break None;
+        }
     }
 }
 
 fn part1(input: &str) -> u32 {
     let mut armies = parse_input(input);
-    let winning_army = fight_until_end(&mut armies);
+    let winning_army = fight_until_end(&mut armies).unwrap();
     armies[winning_army].groups.iter().map(|group| group.num_units).sum()
 }
 
-#[test]
-fn part1example() {
-    assert_eq!(part1("Immune System:
+#[cfg(test)]
+const EXAMPLE: &str = "Immune System:
 17 units each with 5390 hit points (weak to radiation, bludgeoning) with an attack that does 4507 fire damage at initiative 2
 989 units each with 1274 hit points (immune to fire; weak to bludgeoning, slashing) with an attack that does 25 slashing damage at initiative 3
 
 Infection:
 801 units each with 4706 hit points (weak to radiation) with an attack that does 116 bludgeoning damage at initiative 1
-4485 units each with 2961 hit points (immune to radiation; weak to fire, cold) with an attack that does 12 slashing damage at initiative 4"), 5216);
+4485 units each with 2961 hit points (immune to radiation; weak to fire, cold) with an attack that does 12 slashing damage at initiative 4
+";
+
+#[test]
+fn part1example() {
+    assert_eq!(part1(EXAMPLE), 5216);
 }
 
-fn part2(_input: &str) -> String {
-    "TODO".to_string()
+fn boost_army(armies: &Vec<Army>, name: &str, boost: u32) -> Vec<Army> {
+    let mut boosted_armies = armies.clone();
+    for army in &mut boosted_armies {
+        if army.name == name {
+            for group in &mut army.groups {
+                group.attack_damage += boost;
+            }
+        }
+    }
+    boosted_armies
+}
+
+fn part2(input: &str) -> u32 {
+    let armies = parse_input(input);
+    let immune_system_name = "Immune System";
+    for boost in 0.. {
+        println!("Boost: {}", boost);
+        let mut boosted_armies = boost_army(&armies, immune_system_name, boost);
+        let winning_army = fight_until_end(&mut boosted_armies);
+        if let Some(winning_army) = winning_army {
+            if boosted_armies[winning_army].name == immune_system_name {
+                return boosted_armies[winning_army].groups.iter().map(|group| group.num_units).sum()
+            }
+        }
+    }
+    panic!();
 }
 
 #[test]
 fn part2example() {
-    assert_eq!(part2(""), "TODO");
+   assert_eq!(part2(EXAMPLE), 51);
 }
 
 fn main() {
